@@ -89,6 +89,8 @@ class Character:
         new_x, new_y = self.pos[0] + dx, self.pos[1] + dy
         if maze.can_move(new_x, new_y):
             self.pos = [new_x, new_y]
+            pygame.time.wait(100)
+
             return True
         return False
 

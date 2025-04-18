@@ -1,1 +1,1 @@
-1
+        # self.maze.reset()

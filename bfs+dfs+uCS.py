@@ -14,7 +14,7 @@ TILE_SIZE = 21
 GRID_WIDTH, GRID_HEIGHT = 31, 15
 
 WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH, TILE_SIZE * GRID_HEIGHT
-SEARCH_ALGO = 'ucs'  # Change to 'bfs', 'dfs', or 'ucs'
+SEARCH_ALGO = 'dfs'  # Change to 'bfs', 'dfs', or 'ucs'
 
 pacman_img = pygame.image.load("assets/pacman_right.png")
 pacman_img = pygame.transform.scale(pacman_img, (TILE_SIZE, TILE_SIZE))

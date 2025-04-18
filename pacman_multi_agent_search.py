@@ -29,7 +29,6 @@ pacman_up_img = pygame.transform.scale(pacman_up_img, (TILE_SIZE, TILE_SIZE))
 pacman_down_img = pygame.image.load("assets/pacman_down.png")
 pacman_down_img = pygame.transform.scale(pacman_down_img, (TILE_SIZE, TILE_SIZE))
 
-
 # Colors
 BLUE = (24, 24, 217)
 BLACK = (0, 0, 0)

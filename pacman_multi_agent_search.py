@@ -19,6 +19,7 @@ SEARCH_ALGO = 'dfs'
 pacman_img = pygame.image.load("assets/pacman_right.png")
 pacman_img = pygame.transform.scale(pacman_img, (TILE_SIZE, TILE_SIZE))
 
+
 # Colors
 BLACK = (0, 0, 0)
 TEAL = (0, 128, 128)

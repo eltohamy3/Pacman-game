@@ -1,3 +1,4 @@
+import math
 
 # --- Pacman Game with Multiple Search Algorithms & Visual Feedback ---
 import pygame
@@ -13,21 +14,31 @@ pygame.font.init()
 TILE_SIZE = 21
 # GRID_WIDTH, GRID_HEIGHT = 37, 37
 GRID_WIDTH, GRID_HEIGHT = 31, 15
-WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH, TILE_SIZE * GRID_HEIGHT
+WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH + 10, TILE_SIZE * GRID_HEIGHT + 10
 SEARCH_ALGO = 'dfs'
 
-pacman_img = pygame.image.load("assets/pacman_right.png")
-pacman_img = pygame.transform.scale(pacman_img, (TILE_SIZE, TILE_SIZE))
+pacman_right_img = pygame.image.load("assets/pacman_right.png")
+pacman_right_img = pygame.transform.scale(pacman_right_img, (TILE_SIZE, TILE_SIZE))
+
+pacman_left_img = pygame.image.load("assets/pacman_left.png")
+pacman_left_img = pygame.transform.scale(pacman_left_img, (TILE_SIZE, TILE_SIZE))
+
+pacman_up_img = pygame.image.load("assets/pacman_up.png")
+pacman_up_img = pygame.transform.scale(pacman_up_img, (TILE_SIZE, TILE_SIZE))
+
+pacman_down_img = pygame.image.load("assets/pacman_down.png")
+pacman_down_img = pygame.transform.scale(pacman_down_img, (TILE_SIZE, TILE_SIZE))
 
 
 # Colors
+BLUE = (24, 24, 217)
 BLACK = (0, 0, 0)
 TEAL = (0, 128, 128)
 WHITE = (255, 255, 255)
 GOAL_COLOR = (255, 0, 0)
 GREEN = (0, 255, 0)
-PATH_COLOR = (255, 165, 0)
-VISITED_COLOR = (100, 149, 237)
+PATH_COLOR = (168, 92, 83)
+VISITED_COLOR = (82, 80, 80)
 
 # 31 * 15
 BIGSEARCH = mazeLayouts.BIGSEARCH
@@ -44,15 +55,17 @@ class Maze:
     def draw(self, screen, goal, visited, path):
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
-                if self.layout[y][x] == 0:
-                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    pygame.draw.rect(screen, TEAL, rect)
+                if self.layout[y][x] == 0 or self.layout[y][x] == 2:
+                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE * 1.6, TILE_SIZE * 1.6)
+                    pygame.draw.rect(screen, BLACK, rect)
 
+        # color all the nodes that have been visited
         for x, y in visited:
-            pygame.draw.rect(screen, VISITED_COLOR, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+            pygame.draw.rect(screen, VISITED_COLOR, (x * TILE_SIZE + 7, y * TILE_SIZE + 7, TILE_SIZE, TILE_SIZE))
 
+        # color the path to goal
         for x, y in path:
-            pygame.draw.rect(screen, PATH_COLOR, (x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+            pygame.draw.rect(screen, PATH_COLOR, (x * TILE_SIZE + 7, y * TILE_SIZE + 7, TILE_SIZE, TILE_SIZE))
 
         if goal:
             gx, gy = goal
@@ -61,11 +74,13 @@ class Maze:
 class Pacman:
     def __init__(self, x, y):
         self.pos = [x, y]
+        self.prevPos = [x, y]
         self.path = []
         self.reached_goal = False
 
     def move_along_path(self):
         if self.path:
+            self.prevPos = self.pos
             self.pos = self.path.pop(0)
             pygame.time.wait(80)
             if not self.path:
@@ -74,11 +89,19 @@ class Pacman:
     def draw(self, screen):
         x = self.pos[0] * TILE_SIZE
         y = self.pos[1] * TILE_SIZE
-        screen.blit(pacman_img, (x, y))
+        if(self.prevPos[0] - self.pos[0] == 1 and  self.prevPos[1] - self.pos[1] == 0):
+            screen.blit(pacman_left_img, (x, y))
+        if(self.prevPos[0] - self.pos[0] == -1 and  self.prevPos[1] - self.pos[1] == 0):
+            screen.blit(pacman_right_img, (x, y))
+        if(self.prevPos[0] - self.pos[0] == 0 and  self.prevPos[1] - self.pos[1] == -1):
+            screen.blit(pacman_down_img, (x, y))
+        if(self.prevPos[0] - self.pos[0] == 0 and  self.prevPos[1] - self.pos[1] == 1):
+            screen.blit(pacman_up_img, (x, y))
 
 def dfs(maze, start, goal):
     stack = [start]
     visited = set()
+    # A map to track the parent of each node
     parent = {}
     visited.add(start)
     while stack:
@@ -116,6 +139,7 @@ def ucs(maze, start, goal):
     heap = [(0, start)]
     visited = set()
     parent = {}
+    # The cost at each position
     cost_so_far = {start: 0}
     while heap:
         cost, current = heapq.heappop(heap)
@@ -136,7 +160,7 @@ def ucs(maze, start, goal):
     return reconstruct_path(start, goal, parent), visited
 
 def heuristic(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    return max(abs(a[0] - b[0]) + abs(a[1] - b[1]), math.sqrt(pow(a[0] - b[0], 2) + pow(a[1] - b[1], 2)))
 
 def a_star(maze, start, goal):
     heap = [(0, start)]
@@ -194,7 +218,7 @@ def reconstruct_path(start, goal, parent):
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Pacman Multi-Agent Search")
+        pygame.display.set_caption("Pacman Game")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('arial', 20, bold=True)
         self.maze = Maze()
@@ -217,7 +241,7 @@ class Game:
             self.original_path = []
 
     def draw(self):
-        self.screen.fill(BLACK)
+        self.screen.fill(BLUE)
         self.maze.draw(self.screen, self.goal_pos, self.visited_nodes, self.original_path)
         self.pacman.draw(self.screen)
 

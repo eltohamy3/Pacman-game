@@ -9,9 +9,9 @@ pygame.font.init()
 
 # --- Constants ---
 TILE_SIZE = 21
-# GRID_WIDTH, GRID_HEIGHT = 31, 15
+GRID_WIDTH, GRID_HEIGHT = 31, 15
 
-GRID_WIDTH, GRID_HEIGHT = 37 , 37
+# GRID_WIDTH, GRID_HEIGHT = 37 , 37
 
 WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH, TILE_SIZE * GRID_HEIGHT
 
@@ -36,13 +36,15 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 TEAL = (0, 128, 128)
 
-# Maze
-BIGMAZE = mazeLayouts.BIGMAZE
+# 31 * 15
+BIGSEARCH = mazeLayouts.BIGSEARCH
 
+# 37* 37
+BIGMAZE = mazeLayouts.BIGMAZE
 
 class Maze:
     def __init__(self):
-        self.layout = BIGMAZE
+        self.layout = BIGSEARCH
         self.pellets = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         for y in range(len(self.layout)):
             for x in range(len(self.layout[0])):

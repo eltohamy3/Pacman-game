@@ -10,7 +10,9 @@ pygame.font.init()
 
 # Constants
 TILE_SIZE = 21
-GRID_WIDTH, GRID_HEIGHT = 37, 37
+# GRID_WIDTH, GRID_HEIGHT = 37, 37
+GRID_WIDTH, GRID_HEIGHT = 31, 15
+
 WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH, TILE_SIZE * GRID_HEIGHT
 SEARCH_ALGO = 'ucs'  # Change to 'bfs', 'dfs', or 'ucs'
 
@@ -26,11 +28,14 @@ GREEN = (0, 255, 0)
 PATH_COLOR = (255, 165, 0)  # Orange
 VISITED_COLOR = (100, 149, 237)  # Cornflower blue
 
-BIGMAZE = mazeLayouts.BIGMAZE
+# 31 * 15
+BIGSEARCH = mazeLayouts.BIGSEARCH
 
+# 37* 37
+BIGMAZE = mazeLayouts.BIGMAZE
 class Maze:
     def __init__(self):
-        self.layout = BIGMAZE
+        self.layout = BIGSEARCH
 
     def can_move(self, x, y):
         return 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT and self.layout[y][x] == 0
@@ -171,7 +176,7 @@ class Game:
         self.font = pygame.font.SysFont('arial', 24, bold=True)
         self.maze = Maze()
         self.start_pos = (1, 1)
-        self.goal_pos = (35, 35)
+        self.goal_pos = (29, 13)
         self.pacman = Pacman(*self.start_pos)
         self.running = True
         self.start_time = time.time()

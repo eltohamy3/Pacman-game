@@ -1,1 +1,1 @@
-# --- Pellet Map ---
+# GRID_WIDTH, GRID_HEIGHT = 37, 37

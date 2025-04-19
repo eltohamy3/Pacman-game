@@ -67,7 +67,7 @@ class Pacman:
     def move_along_path(self):
         if self.path:
             self.pos = self.path.pop(0)
-            pygame.time.wait(80)
+            pygame.time.wait(100)
             if not self.path:
                 self.reached_goal = True
 
@@ -205,12 +205,12 @@ class Game:
 
     def set_algorithm(self, name):
         self.algorithm = name
-        self.pacman = Pacman(*self.start_pos)
+        self.pacman = Pacman(*self.start_pos) # * slef.start_pos = x , y 
         self.start_time = time.time()
         self.end_time = None
         search_fn = {'dfs': dfs, 'bfs': bfs, 'ucs': ucs, 'astar': a_star, 'greedy': greedy}.get(name)
         if search_fn:
-            self.pacman.path, self.visited_nodes = search_fn(self.maze, self.start_pos, self.goal_pos)
+            self.pacman.path , self.visited_nodes = search_fn(self.maze, self.start_pos, self.goal_pos)
             self.original_path = list(self.pacman.path)
         else:
             self.visited_nodes = set()

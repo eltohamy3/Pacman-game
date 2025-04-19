@@ -48,8 +48,8 @@ class Game :
         self.clock = pygame.time.Clock ( )
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
         self.maze = Maze ( )
-        self.start_pos = (1 , 1)
-        self.goal_pos = (29 , 13)
+        self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
+        self.goal_pos = (1 , GRID_HEIGHT - 2)
         self.running = True
         self.start_menu ( )
     def set_algorithm ( self , name ) :
@@ -90,59 +90,69 @@ class Game :
         if not self.pacman.reached_goal :
             self.pacman.move_along_path ( )
 
-    def end_menu ( self ) :
-        self.screen.fill ( BLACK )
-        title = self.font.render ( "Select Search Algorithm" , True , GREEN )
-        self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 50) )
-
-        options = [
-            ("1 - DFS" , pygame.K_1) ,
-            ("2 - BFS" , pygame.K_2) ,
-            ("3 - UCS" , pygame.K_3) ,
-            ("4 - A*" , pygame.K_4) ,
-            ("5 - Greedy Best-First" , pygame.K_5) ,
-        ]
-
-        for i , (text , _) in enumerate ( options ) :
-            option_text = self.font.render ( text , True , WHITE )
-            self.screen.blit ( option_text , (WIDTH // 2 - option_text.get_width ( ) // 2 , 120 + i * 40) )
-
-        pygame.display.flip ( )
-
-        for event in pygame.event.get ( ) :
-            if event.type == pygame.QUIT :
-                pygame.quit ( )
-                exit ( )
-            elif event.type == pygame.KEYDOWN :
-                keys = {
-                    pygame.K_1 : 'dfs' ,
-                    pygame.K_2 : 'bfs' ,
-                    pygame.K_3 : 'ucs' ,
-                    pygame.K_4 : 'astar' ,
-                    pygame.K_5 : 'greedy' ,
-                }
-                if event.key in keys :
-                    self.set_algorithm ( keys [event.key] )
-                    selecting = False
+    # def end_menu ( self ) :
+    #     self.screen.fill ( BLACK )
+    #     title = self.font.render ( "Select Search Algorithm" , True , GREEN )
+    #     self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 50) )
+    #
+    #     options = [
+    #         ("1 - DFS" , pygame.K_1) ,
+    #         ("2 - BFS" , pygame.K_2) ,
+    #         ("3 - UCS" , pygame.K_3) ,
+    #         ("4 - A*" , pygame.K_4) ,
+    #         ("5 - Greedy Best-First" , pygame.K_5) ,
+    #     ]
+    #
+    #     for i , (text , _) in enumerate ( options ) :
+    #         option_text = self.font.render ( text , True , WHITE )
+    #         self.screen.blit ( option_text , (WIDTH // 2 - option_text.get_width ( ) // 2 , 120 + i * 40) )
+    #
+    #     pygame.display.flip ( )
+    #
+    #     for event in pygame.event.get ( ) :
+    #         if event.type == pygame.QUIT :
+    #             pygame.quit ( )
+    #             exit ( )
+    #         elif event.type == pygame.KEYDOWN :
+    #             keys = {
+    #                 pygame.K_1 : 'dfs' ,
+    #                 pygame.K_2 : 'bfs' ,
+    #                 pygame.K_3 : 'ucs' ,
+    #                 pygame.K_4 : 'astar' ,
+    #                 pygame.K_5 : 'greedy' ,
+    #             }
+    #             if event.key in keys :
+    #                 self.set_algorithm ( keys [event.key] )
+    #                 selecting = False
 
     def start_menu ( self ) :
         selecting = True
         while selecting :
             self.screen.fill ( BLACK )
+            self.font = pygame.font.Font(None, 40)
             title = self.font.render ( "Select Search Algorithm" , True , GREEN )
-            self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 50) )
+            self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 40) )
 
             options = [
-                ("1 - DFS" , pygame.K_1) ,
-                ("2 - BFS" , pygame.K_2) ,
-                ("3 - UCS" , pygame.K_3) ,
-                ("4 - A*" , pygame.K_4) ,
-                ("5 - Greedy Best-First" , pygame.K_5) ,
+                ("a- DFS (single goal)" , pygame.K_a) ,
+                ("b- BFS (single goal)" , pygame.K_b) ,
+                ("c- UCS (single goal)" , pygame.K_c) ,
+                ("d- A* Search (single goal)" , pygame.K_d) ,
+                ("e- Greedy Search (single goal)" , pygame.K_e) ,
+                ("f- DFS (Multiple goals)", pygame.K_f),
+                ("g- BFS (Multiple goals)", pygame.K_g),
+                ("h- UCS (Multiple goals)", pygame.K_h),
+                ("i- A* Search (Multiple goals)", pygame.K_i),
+                ("j- Greedy Search (Multiple goals)", pygame.K_j),
             ]
 
+            self.font = pygame.font.Font(None, 24)
             for i , (text , _) in enumerate ( options ) :
                 option_text = self.font.render ( text , True , WHITE )
-                self.screen.blit ( option_text , (WIDTH // 2 - option_text.get_width ( ) // 2 , 120 + i * 40) )
+                if(i < 5):
+                    self.screen.blit (option_text , (20 , 120 + i * 40) )
+                else:
+                    self.screen.blit(option_text, (WIDTH // 2 + 20, 120 + (i - 5) * 40))
 
             pygame.display.flip ( )
 
@@ -152,11 +162,16 @@ class Game :
                     exit ( )
                 elif event.type == pygame.KEYDOWN :
                     keys = {
-                        pygame.K_1 : 'dfs' ,
-                        pygame.K_2 : 'bfs' ,
-                        pygame.K_3 : 'ucs' ,
-                        pygame.K_4 : 'astar' ,
-                        pygame.K_5 : 'greedy' ,
+                        pygame.K_a : 'dfs' ,
+                        pygame.K_b : 'bfs' ,
+                        pygame.K_c : 'ucs' ,
+                        pygame.K_d : 'astar' ,
+                        pygame.K_e : 'greedy' ,
+                        # pygame.K_f: 'dfs',
+                        # pygame.K_g: 'bfs',
+                        # pygame.K_h: 'ucs',
+                        # pygame.K_i: 'astar',
+                        # pygame.K_j: 'greedy',
                     }
                     if event.key in keys :
                         self.set_algorithm ( keys [event.key] )

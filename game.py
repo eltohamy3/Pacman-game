@@ -81,7 +81,7 @@ class Game :
         pygame.display.set_caption ( "Pacman Game" )
         self.clock = pygame.time.Clock ( )
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
-        self.maze = Maze ( )
+        self.maze = Maze ( ) 
         self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
         self.goal_pos = {(1, GRID_HEIGHT - 2)}
         self.running = True
@@ -199,3 +199,5 @@ class Game :
 if __name__ == "__main__" :
     game = Game ( )
     game.run ( )
+
+

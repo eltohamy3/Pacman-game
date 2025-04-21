@@ -16,16 +16,16 @@ GRID_WIDTH, GRID_HEIGHT = 31, 15
 WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH, TILE_SIZE * GRID_HEIGHT
 
 # Load Pacman images
-pacman_right_img = pygame.image.load("assets/pacman_right.png")
+pacman_right_img = pygame.image.load("assets/pacman-right/1.png")
 pacman_right_img = pygame.transform.scale(pacman_right_img, (TILE_SIZE, TILE_SIZE))
 
-pacman_left_img = pygame.image.load("assets/pacman_left.png")
+pacman_left_img = pygame.image.load("assets/pacman-left/1.png")
 pacman_left_img = pygame.transform.scale(pacman_left_img, (TILE_SIZE, TILE_SIZE))
 
-pacman_up_img = pygame.image.load("assets/pacman_up.png")
+pacman_up_img = pygame.image.load("assets/pacman-up/1.png")
 pacman_up_img = pygame.transform.scale(pacman_up_img, (TILE_SIZE, TILE_SIZE))
 
-pacman_down_img = pygame.image.load("assets/pacman_down.png")
+pacman_down_img = pygame.image.load("assets/pacman-down/1.png")
 pacman_down_img = pygame.transform.scale(pacman_down_img, (TILE_SIZE, TILE_SIZE))
 
 # Colors

@@ -78,7 +78,7 @@ class Character:
 
     def move(self, dx, dy, maze):
         new_x, new_y = self.pos[0] + dx, self.pos[1] + dy
-        if maze.can_move(new_x, new_y):
+        if maze.valid(new_x, new_y):
             self.pos = [new_x, new_y]
             pygame.time.wait(100)
             return True
@@ -128,7 +128,7 @@ class Ghost(Character):
                 return path
             for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
                 nx, ny = x + dx, y + dy
-                if maze.can_move(nx, ny) and (nx, ny) not in visited:
+                if maze.valid(nx, ny) and (nx, ny) not in visited:
                     queue.append(((nx, ny), path + [[nx, ny]]))
                     visited.add((nx, ny))
         return [start]
@@ -137,7 +137,7 @@ class Ghost(Character):
         possible_moves = []
         for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
             new_x, new_y = self.pos[0] + dx, self.pos[1] + dy
-            if maze.can_move(new_x, new_y):
+            if maze.valid(new_x, new_y):
                 possible_moves.append([new_x, new_y])
         return random.choice(possible_moves) if possible_moves else self.pos
 

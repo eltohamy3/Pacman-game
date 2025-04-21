@@ -1,8 +1,4 @@
 import time
-from typing import Deque , Tuple , Optional
-
-from configuration import *
-from search import *
 from pacman import *
 
 pygame.init ( )
@@ -11,13 +7,52 @@ pygame.font.init ( )
 class Maze :
     def __init__ ( self ) :
         self.layout = BIGSEARCH
+        self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
+        self.goals = set()
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                if self.layout[y][x] == 0:
+                    self.goals.add((x, y))
+
+    def initialize_goals(self, goal = None):
+        # single goal
+        if goal is not None :
+            self.goals = goal
+
+        # 2D array to track uneaten dots (True = uneaten, False = eaten)
+        for x, y in self.goals:
+            self.uneaten[y][x] = True
+
+
+    def eat_dot(self, x, y):
+        if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+            self.uneaten[y][x] = False
+
+    def is_not_eaten(self, x, y):
+        if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+            return self.uneaten[y][x]
+        return False
+
+    def get_uneaten_dots(self):
+        uneaten_dots = set()
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                if self.is_not_eaten(x, y):
+                    uneaten_dots.add((x, y))
+        return uneaten_dots
+
+    def all_dots_eaten(self):
+        return len(self.get_uneaten_dots()) == 0
+
     def rows_len(self):
         return  len (  self.layout )
+
     def columns_len ( self ) :
         return len (  self.layout [0] ) if len (self.layout ) else 0
 
-    def can_move ( self , x , y ) :
-        return GRID_WIDTH > x >= 0 == self.layout [y] [x] and 0 <= y < GRID_HEIGHT
+    def valid ( self , x , y ) :
+        return GRID_WIDTH > x >= 0 == self.layout [y][x] and 0 <= y < GRID_HEIGHT
+
     def draw ( self , screen , goal , visited , path ) :
         for y in range ( GRID_HEIGHT ) :
             for x in range ( GRID_WIDTH ) :
@@ -34,12 +69,9 @@ class Maze :
         for x , y in path :
             pygame.draw.rect ( screen , PATH_COLOR , (x * TILE_SIZE + 7 , y * TILE_SIZE + 7 , TILE_SIZE , TILE_SIZE) )
 
-        if goal :
-            gx , gy = goal
-            pygame.draw.circle ( screen , GOAL_COLOR ,
-                                 (gx * TILE_SIZE + TILE_SIZE // 2 , gy * TILE_SIZE + TILE_SIZE // 2) ,
-                                 6 )
-
+        # Draw dots for goals that haven't been eaten yet
+        for x, y in self.get_uneaten_dots():
+            pygame.draw.circle(screen, DOT_COLOR, (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2), 4)
 
 class Game :
     def __init__ ( self ) :
@@ -49,81 +81,55 @@ class Game :
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
         self.maze = Maze ( )
         self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
-        self.goal_pos = (1 , GRID_HEIGHT - 2)
+        self.goal_pos = {(1, GRID_HEIGHT - 2)}
         self.running = True
         self.start_menu ( )
+        self.path_history = []
+
     def set_algorithm ( self , name ) :
         self.algorithm = name
-        self.pacman = Pacman ( *self.start_pos )
+        self.pacman = Pacman ( *self.start_pos, self.maze )
         self.start_time = time.time ( )
         self.end_time = None
-        search_fn = { 'dfs' : dfs , 'bfs' : bfs , 'ucs' : ucs , 'astar' : a_star , 'greedy' : greedy }.get ( name )
-        if search_fn :
-            self.pacman.path , self.visited_nodes = search_fn(self.maze,self.start_pos,self.goal_pos)
-            self.original_path = list ( self.pacman.path )
-        else :
-            self.visited_nodes = set ( )
-            self.original_path = []
 
     def draw ( self ) :
         self.screen.fill ( BLUE )
-        self.maze.draw ( self.screen , self.goal_pos , self.visited_nodes , self.original_path )
+        self.maze.draw ( self.screen , self.goal_pos , self.pacman.visited_nodes , self.pacman.original_path )
+        # if not self.pacman.all_goals_reached:
         self.pacman.draw ( self.screen )
 
-        if self.pacman.reached_goal :
-            self.end_time = self.end_time or time.time ( )
-            elapsed = round ( self.end_time - self.start_time , 2 )
+        if self.pacman.all_goals_reached:
+            self.end_time = self.end_time or time.time()
+            elapsed = round(self.end_time - self.start_time, 2)
+
+            # Draw a semi-transparent background
+            s = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+            s.fill((0, 0, 0, 180))  # Black with transparency
+            self.screen.blit(s, (0, 0))
+
             stats = [
-                f"{self.algorithm.upper ( )} - Goal Reached!" ,
-                f"Time: {elapsed}s" ,
-                f"Visited: {len ( self.visited_nodes )}" ,
-                f"Path Length: {len ( self.original_path )}" ,
+                f"{self.algorithm.upper()} - Goal Reached!",
+                f"Time: {elapsed}s",
+                f"Visited: {len(self.pacman.visited_nodes)}",
+                f"Path Length: {len(self.path_history)}",
                 "Press R to Restart or Q to Quit"
             ]
-            for i , line in enumerate ( stats ) :
-                txt = self.font.render ( line , True , GREEN )
-                self.screen.blit ( txt , (10 , HEIGHT - (len ( stats ) - i) * 24) )
+            for i, line in enumerate(stats):
+                txt = self.font.render(line, True, GREEN)
+                self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 100 + i * 30))
 
         pygame.display.flip ( )
 
-    def update ( self ) :
-        if not self.pacman.reached_goal :
-            self.pacman.move_along_path ( )
+    def update(self):
+        if not self.pacman.all_goals_reached:
+            # If we have no current path, find the next path
+            if not self.pacman.path:
+                self.pacman.find_next_path(self.algorithm)
 
-    # def end_menu ( self ) :
-    #     self.screen.fill ( BLACK )
-    #     title = self.font.render ( "Select Search Algorithm" , True , GREEN )
-    #     self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 50) )
-    #
-    #     options = [
-    #         ("1 - DFS" , pygame.K_1) ,
-    #         ("2 - BFS" , pygame.K_2) ,
-    #         ("3 - UCS" , pygame.K_3) ,
-    #         ("4 - A*" , pygame.K_4) ,
-    #         ("5 - Greedy Best-First" , pygame.K_5) ,
-    #     ]
-    #
-    #     for i , (text , _) in enumerate ( options ) :
-    #         option_text = self.font.render ( text , True , WHITE )
-    #         self.screen.blit ( option_text , (WIDTH // 2 - option_text.get_width ( ) // 2 , 120 + i * 40) )
-    #
-    #     pygame.display.flip ( )
-    #
-    #     for event in pygame.event.get ( ) :
-    #         if event.type == pygame.QUIT :
-    #             pygame.quit ( )
-    #             exit ( )
-    #         elif event.type == pygame.KEYDOWN :
-    #             keys = {
-    #                 pygame.K_1 : 'dfs' ,
-    #                 pygame.K_2 : 'bfs' ,
-    #                 pygame.K_3 : 'ucs' ,
-    #                 pygame.K_4 : 'astar' ,
-    #                 pygame.K_5 : 'greedy' ,
-    #             }
-    #             if event.key in keys :
-    #                 self.set_algorithm ( keys [event.key] )
-    #                 selecting = False
+            # Move along the current path
+            if self.pacman.move():
+                self.path_history.append(self.pacman.pos)
+                pygame.time.wait(120)  # Delay for visualization
 
     def start_menu ( self ) :
         selecting = True
@@ -132,21 +138,8 @@ class Game :
             self.font = pygame.font.Font(None, 40)
             title = self.font.render ( "Select Search Algorithm" , True , GREEN )
             self.screen.blit ( title , (WIDTH // 2 - title.get_width ( ) // 2 , 40) )
-
-            options = [
-                ("a- DFS (single goal)" , pygame.K_a) ,
-                ("b- BFS (single goal)" , pygame.K_b) ,
-                ("c- UCS (single goal)" , pygame.K_c) ,
-                ("d- A* Search (single goal)" , pygame.K_d) ,
-                ("e- Greedy Search (single goal)" , pygame.K_e) ,
-                ("f- DFS (Multiple goals)", pygame.K_f),
-                ("g- BFS (Multiple goals)", pygame.K_g),
-                ("h- UCS (Multiple goals)", pygame.K_h),
-                ("i- A* Search (Multiple goals)", pygame.K_i),
-                ("j- Greedy Search (Multiple goals)", pygame.K_j),
-            ]
-
             self.font = pygame.font.Font(None, 24)
+
             for i , (text , _) in enumerate ( options ) :
                 option_text = self.font.render ( text , True , WHITE )
                 if(i < 5):
@@ -161,19 +154,11 @@ class Game :
                     pygame.quit ( )
                     exit ( )
                 elif event.type == pygame.KEYDOWN :
-                    keys = {
-                        pygame.K_a : 'dfs' ,
-                        pygame.K_b : 'bfs' ,
-                        pygame.K_c : 'ucs' ,
-                        pygame.K_d : 'astar' ,
-                        pygame.K_e : 'greedy' ,
-                        # pygame.K_f: 'dfs',
-                        # pygame.K_g: 'bfs',
-                        # pygame.K_h: 'ucs',
-                        # pygame.K_i: 'astar',
-                        # pygame.K_j: 'greedy',
-                    }
                     if event.key in keys :
+                        if event.key < pygame.K_f:
+                            self.maze.initialize_goals(self.goal_pos)
+                        else:
+                            self.maze.initialize_goals()
                         self.set_algorithm ( keys [event.key] )
                         selecting = False
 
@@ -182,15 +167,13 @@ class Game :
         self.start_menu ( )
 
         # Recreate Pacman and rerun the selected search
-        self.pacman = Pacman ( *self.start_pos )
+        self.pacman = Pacman ( *self.start_pos, self.maze )
         self.start_time = time.time ( )
         self.end_time = None
-        search_fn = { 'dfs' : dfs , 'bfs' : bfs , 'ucs' : ucs , 'astar' : a_star , 'greedy' : greedy }.get (
-            self.algorithm )
+        search_fn = search_algorithms.get (self.algorithm )
         if search_fn :
             self.pacman.path , self.visited_nodes = search_fn ( self.maze , self.start_pos , self.goal_pos )
             self.original_path = list ( self.pacman.path )
-
         else :
             self.visited_nodes = set ( )
             self.original_path = []
@@ -202,7 +185,7 @@ class Game :
                 if event.type == pygame.QUIT :
                     self.running = False
                 elif event.type == pygame.KEYDOWN :
-                    if self.pacman.reached_goal :
+                    if self.pacman.all_goals_reached :
                         if event.key == pygame.K_r :
                             self.reset ( )
                         elif event.key == pygame.K_q :
@@ -211,8 +194,6 @@ class Game :
             self.draw ( )
         pygame.quit ( )
 
-
 if __name__ == "__main__" :
     game = Game ( )
     game.run ( )
-

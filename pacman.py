@@ -1,37 +1,68 @@
-import pygame
-from configuration import TILE_SIZE,pacman_right_path,pacman_left_path,pacman_up_path,pacman_down_path
+from configuration import *
 
 class Pacman :
-    def __init__ ( self , x , y ) :
-        self.pos = [x , y]
+    def __init__ ( self , x , y, maze ) :
+        self.pos = (x , y)
         self.dir = "r"
-        self.prevPos = [x , y]
+        self.prevPos = (x - 1 , y)
         self.path = []
-        self.reached_goal = False
+        self.original_path = []
         self.frame_idx = 0
+        self.maze = maze
+        self.all_goals_reached = False
+        self.visited_nodes = set()
 
-    def move_along_path ( self ) :
-        if self.path :
+        # Eat the starting position dot
+        self.maze.eat_dot(x, y)
+
+    def find_next_path(self, algorithm):
+        self.path = []
+        uneaten_dots = self.maze.get_uneaten_dots()
+
+        if not uneaten_dots:
+            self.all_goals_reached = True
+            return
+
+        # Find the next goal based on the algorithm
+        search_fn = search_algorithms.get(algorithm)
+        if search_fn :
+            self.path, visited = search_fn(self.maze, self.pos, uneaten_dots)
+            self.original_path = list (self.path)
+
+        # Update visited nodes
+        self.visited_nodes.update(visited)
+
+    def move(self):
+        if self.path:
             self.prevPos = self.pos
-            self.pos = self.path.pop ( 0 )
-            pygame.time.wait (100)
-            if not self.path :
-                self.reached_goal = True
+            self.pos = self.path.pop(0)
+
+            # Eat the dot
+            self.maze.eat_dot(self.pos[0], self.pos[1])
+
+            # Check if we've reached all goals
+            if self.maze.all_dots_eaten():
+                self.all_goals_reached = True
+            return True
+        return False
 
     def get_direction ( self , screen ) :
         (pos_x , pos_y) = (self.prevPos [0] - self.pos [0] , self.prevPos [1] - self.pos [1])
-        self.dir = { (-1 , 0) : 'r' , (1 , 0) : 'l' , (0 , -1) : 'd' , (0 , 1) : 'u' }.get ( (pos_x , pos_y) )
+        self.dir = movement_direction.get ( (pos_x , pos_y) )
 
     def update_frame ( self , screen ) :
         x = self.pos [0] * TILE_SIZE
         y = self.pos [1] * TILE_SIZE
-        pacman_dir = { 'r' : pacman_right_path , 'l' : pacman_left_path , 'u' : pacman_up_path ,
-                       'd' : pacman_down_path }.get ( self.dir )
+
+        pacman_dir = pacman_directions.get ( self.dir )
         self.frame_idx = self.frame_idx % len ( pacman_dir )
+
         pacman_img = pygame.image.load ( pacman_dir [self.frame_idx] )
         pacman_img = pygame.transform.scale ( pacman_img , (TILE_SIZE , TILE_SIZE) )
         screen.blit ( pacman_img , (x , y) )
-        self.frame_idx += 1
+
+        if not self.all_goals_reached:
+            self.frame_idx += 1
 
     def draw ( self , screen ) :
         self.get_direction ( screen )

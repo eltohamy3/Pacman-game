@@ -77,7 +77,7 @@ def bfs(maze, start, goal):
         x, y = current
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = x + dx, y + dy
-            if maze.can_move(nx, ny) and (nx, ny) not in visited:
+            if maze.valid(nx, ny) and (nx, ny) not in visited:
                 queue.append((nx, ny))
                 visited.add((nx, ny))
                 parent[(nx, ny)] = current

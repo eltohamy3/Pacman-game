@@ -50,8 +50,10 @@ class Maze :
     def columns_len ( self ) :
         return len (  self.layout [0] ) if len (self.layout ) else 0
 
-    def valid ( self , x , y ) :
-        return GRID_WIDTH > x >= 0 == self.layout [y][x] and 0 <= y < GRID_HEIGHT
+    def valid(self, x, y):
+        if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+            return self.layout[y][x] == 0
+        return False
 
     def draw ( self , screen , goal , visited , path ) :
         for y in range ( GRID_HEIGHT ) :

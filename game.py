@@ -98,6 +98,12 @@ class Game :
         # if not self.pacman.all_goals_reached:
         self.pacman.draw ( self.screen )
 
+        goals_eaten = len(self.maze.goals) - len(self.maze.get_uneaten_dots())
+        total_goals = len(self.maze.goals)
+        progress_text = f"Goals: {goals_eaten}/{total_goals}"
+        txt = self.font.render(progress_text, True, WHITE)
+        self.screen.blit(txt, (10, 5))
+
         if self.pacman.all_goals_reached:
             self.end_time = self.end_time or time.time()
             elapsed = round(self.end_time - self.start_time, 2)
@@ -172,8 +178,8 @@ class Game :
         self.end_time = None
         search_fn = search_algorithms.get (self.algorithm )
         if search_fn :
-            self.pacman.path , self.visited_nodes = search_fn ( self.maze , self.start_pos , self.goal_pos )
-            self.original_path = list ( self.pacman.path )
+            self.pacman.path , self.pacman.visited_nodes = search_fn ( self.maze , self.start_pos , self.goal_pos )
+            self.pacman.original_path = list ( self.pacman.path )
         else :
             self.visited_nodes = set ( )
             self.original_path = []

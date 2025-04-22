@@ -1,6 +1,6 @@
 import pygame
 from search import *
-from mazeLayouts import mazeLayouts
+import mazeLayouts
 
 TILE_SIZE = 21
 # GRID_WIDTH, GRID_HEIGHT = 37, 37

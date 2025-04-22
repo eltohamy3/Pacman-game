@@ -3,6 +3,24 @@ from collections import deque
 
 direction_array = [ (-1 , 0), (1 , 0), (0 , -1), (0 , 1)]
 
+def euclideanHeuristic ( a , b ) :
+    return ((a [0] - b [0]) ** 2 + (a [1] - b [1]) ** 2 ) ** 0.5
+
+def manhattanHeuristic ( a , b ) :
+    return abs(a [0] - b [0]) - abs(a [1] - b [1])
+
+def get_nearest_goal(start, goals):
+    closest_goal = None
+    min_distance = float('inf')
+
+    for goal in goals:
+        distance = manhattanHeuristic(start, goal)
+        if distance < min_distance:
+            closest_goal = goal
+            min_distance = distance
+
+    return closest_goal
+
 def dfs ( maze , start , goal ) :
         stack = [start]
         visited = set()
@@ -28,6 +46,7 @@ def bfs ( maze , start , goal ) :
     visited = set (  )
     parent = { }
     visited.add ( start )
+
     while queue :
         current = queue.popleft ( )
 
@@ -67,9 +86,6 @@ def ucs ( maze , start , goal ) :
                 parent [next_node] = current
     return [], visited
 
-def heuristic ( a , b ) :
-    return ((a [0] - b [0]) ** 2 + (a [1] - b [1]) ** 2 ) ** 0.5
-
 def a_star ( maze , start , goal ) :
     goal_pos = goal.pop()
     heap = [(0 , start)]
@@ -88,14 +104,14 @@ def a_star ( maze , start , goal ) :
             new_g = cost_to_node [current] + 1
             if maze.valid(nx, ny) and (next_node not in cost_to_node or new_g < cost_to_node [next_node]) :
                 cost_to_node [next_node] = new_g
-                estimated_cheapest_cost = new_g + heuristic ( next_node , goal_pos )
+                estimated_cheapest_cost = new_g + euclideanHeuristic(next_node, goal_pos)
                 heapq.heappush ( heap , (estimated_cheapest_cost , next_node) )
                 parent [next_node] = current
     return [], visited
 
 def greedy ( maze , start , goal ) :
     goal_pos = goal.pop()
-    heap = [(heuristic ( start , goal_pos ) , start)]
+    heap = [(euclideanHeuristic(start, goal_pos), start)]
     parent = { }
     visited = set ( )
     while heap :
@@ -110,7 +126,7 @@ def greedy ( maze , start , goal ) :
             nx , ny = x + dx , y + dy
             next_node = (nx , ny)
             if maze.valid(nx, ny) and next_node not in visited :
-                heapq.heappush ( heap , (heuristic ( next_node , goal_pos ) , next_node) )
+                heapq.heappush (heap, (euclideanHeuristic(next_node, goal_pos), next_node))
                 parent [next_node] = current
     return [], visited
 

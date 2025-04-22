@@ -140,3 +140,4 @@ def reconstruct_path ( start , goal , parent ) :
             return []
     path.reverse ( )
     return path
+    

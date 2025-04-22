@@ -5,24 +5,25 @@ pygame.init ( )
 pygame.font.init ( )
 
 class Maze :
-    def __init__ ( self ) :
+    def __init__ ( self  , type) :
         self.layout = BIGSEARCH
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
-        for y in range(GRID_HEIGHT):
-            for x in range(GRID_WIDTH):
-                if self.layout[y][x] == 0:
-                    self.goals.add((x, y))
+        self.type = type;  # 0 single gole  , 1 multi gole ,2 multi agent
 
-    def initialize_goals(self, goal = None):
-        # single goal
-        if goal is not None :
-            self.goals = goal
+        if type ==1 :
+            for y in range(GRID_HEIGHT):
+                for x in range(GRID_WIDTH):
+                    if self.layout[y][x] == 0:
+                        self.goals.add((x, y))
 
+        elif type==0:
+            self.goals.add((1, GRID_HEIGHT - 2))
+        elif type==2:
+            self.goals.add((2,3))
         # 2D array to track uneaten dots (True = uneaten, False = eaten)
         for x, y in self.goals:
             self.uneaten[y][x] = True
-
 
     def eat_dot(self, x, y):
         if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
@@ -55,7 +56,7 @@ class Maze :
             return self.layout[y][x] == 0
         return False
 
-    def draw ( self , screen , goal , visited , path ) :
+    def draw ( self , screen  , visited , path ) :
         for y in range ( GRID_HEIGHT ) :
             for x in range ( GRID_WIDTH ) :
                 if self.layout [y] [x] == 0 or self.layout [y] [x] == 2 :
@@ -81,9 +82,7 @@ class Game :
         pygame.display.set_caption ( "Pacman Game" )
         self.clock = pygame.time.Clock ( )
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
-        self.maze = Maze ( ) 
         self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
-        self.goal_pos = {(1, GRID_HEIGHT - 2)}
         self.running = True
         self.start_menu ( )
         self.path_history = []
@@ -96,7 +95,7 @@ class Game :
 
     def draw ( self ) :
         self.screen.fill ( BLUE )
-        self.maze.draw ( self.screen , self.goal_pos , self.pacman.visited_nodes , self.pacman.original_path )
+        self.maze.draw ( self.screen  , self.pacman.visited_nodes , self.pacman.original_path )
         # if not self.pacman.all_goals_reached:
         self.pacman.draw ( self.screen )
 
@@ -115,13 +114,27 @@ class Game :
             s.fill((0, 0, 0, 180))  # Black with transparency
             self.screen.blit(s, (0, 0))
 
-            stats = [
-                f"{self.algorithm.upper()} - Goal Reached!",
-                f"Time: {elapsed}s",
-                f"Visited: {len(self.pacman.visited_nodes)}",
-                f"Path Length: {len(self.path_history)}",
-                "Press R to Restart or Q to Quit"
-            ]
+            if self.maze.type ==0 :
+                stats = [
+                    f"{self.algorithm.upper()} - Goal Reached!",
+                    f"Time: {elapsed}s",
+                    f"Visited: {len(self.pacman.visited_nodes)}",
+                    f"Path Length: {len(self.path_history)}",
+                    "Press R to Restart or Q to Quit"
+                ]
+            elif self.maze.type ==1 :  
+                stats = [
+                    f"{self.algorithm.upper()} - Goal Reached!",
+                    f"Time: {elapsed}s",
+                    f"Path Length: {len(self.path_history)}",
+                    "Press R to Restart or Q to Quit"
+                ]
+            else :  
+                stats = [
+                    f"{self.algorithm.upper()} - Goal Reached!",
+                    f"Time: {elapsed}s",
+                    "Press R to Restart or Q to Quit"
+                ]            
             for i, line in enumerate(stats):
                 txt = self.font.render(line, True, GREEN)
                 self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, 100 + i * 30))
@@ -164,9 +177,9 @@ class Game :
                 elif event.type == pygame.KEYDOWN :
                     if event.key in keys :
                         if event.key < pygame.K_f:
-                            self.maze.initialize_goals(self.goal_pos)
+                            self.maze= Maze(0)
                         else:
-                            self.maze.initialize_goals()
+                            self.maze= Maze(1)
                         self.set_algorithm ( keys [event.key] )
                         selecting = False
 
@@ -180,7 +193,7 @@ class Game :
         self.end_time = None
         search_fn = search_algorithms.get (self.algorithm )
         if search_fn :
-            self.pacman.path , self.pacman.visited_nodes = search_fn ( self.maze , self.start_pos , self.goal_pos )
+            self.pacman.path , self.pacman.visited_nodes = search_fn ( self.maze , self.start_pos , self.maze.goals )
             self.pacman.original_path = list ( self.pacman.path )
         else :
             self.visited_nodes = set ( )

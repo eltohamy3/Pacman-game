@@ -6,20 +6,7 @@ direction_array = [ (-1 , 0), (1 , 0), (0 , -1), (0 , 1)]
 def euclideanHeuristic ( a , b ) :
     return ((a [0] - b [0]) ** 2 + (a [1] - b [1]) ** 2 ) ** 0.5
 
-def manhattanHeuristic ( a , b ) :
-    return abs(a [0] - b [0]) - abs(a [1] - b [1])
 
-def get_nearest_goal(start, goals):
-    closest_goal = None
-    min_distance = float('inf')
-
-    for goal in goals:
-        distance = manhattanHeuristic(start, goal)
-        if distance < min_distance:
-            closest_goal = goal
-            min_distance = distance
-
-    return closest_goal
 
 def dfs ( maze , start , goal ) :
         stack = [start]
@@ -29,7 +16,7 @@ def dfs ( maze , start , goal ) :
         while stack :
             current = stack.pop ( )
 
-            if current in goal :
+            if current == goal :
                 return reconstruct_path ( start , current , parent ) , visited
 
             x , y = current
@@ -50,7 +37,7 @@ def bfs ( maze , start , goal ) :
     while queue :
         current = queue.popleft ( )
 
-        if current in goal :
+        if current == goal :
             return reconstruct_path ( start , current , parent ) , visited
 
         x , y = current
@@ -73,7 +60,7 @@ def ucs ( maze , start , goal ) :
         if current in visited :
             continue
         visited.add ( current )
-        if current in goal :
+        if current == goal :
             return reconstruct_path ( start , current , parent ) , visited
         x , y = current
         for dx , dy in direction_array :
@@ -87,14 +74,13 @@ def ucs ( maze , start , goal ) :
     return [], visited
 
 def a_star ( maze , start , goal ) :
-    goal_pos = goal.pop()
     heap = [(0 , start)]
     parent = { }
     cost_to_node = { start : 0 }
     visited = set ( )
     while heap :
         _ , current = heapq.heappop ( heap )
-        if current == goal_pos :
+        if current == goal :
             return reconstruct_path ( start , current , parent ) , visited
         visited.add ( current )
         x , y = current
@@ -104,19 +90,18 @@ def a_star ( maze , start , goal ) :
             new_g = cost_to_node [current] + 1
             if maze.valid(nx, ny) and (next_node not in cost_to_node or new_g < cost_to_node [next_node]) :
                 cost_to_node [next_node] = new_g
-                estimated_cheapest_cost = new_g + euclideanHeuristic(next_node, goal_pos)
+                estimated_cheapest_cost = new_g + euclideanHeuristic(next_node, goal)
                 heapq.heappush ( heap , (estimated_cheapest_cost , next_node) )
                 parent [next_node] = current
     return [], visited
 
 def greedy ( maze , start , goal ) :
-    goal_pos = goal.pop()
-    heap = [(euclideanHeuristic(start, goal_pos), start)]
+    heap = [(euclideanHeuristic(start, goal), start)]
     parent = { }
     visited = set ( )
     while heap :
         _ , current = heapq.heappop ( heap )
-        if current == goal_pos :
+        if current == goal :
             return reconstruct_path ( start , current , parent ) , visited
         if current in visited :
             continue
@@ -126,7 +111,7 @@ def greedy ( maze , start , goal ) :
             nx , ny = x + dx , y + dy
             next_node = (nx , ny)
             if maze.valid(nx, ny) and next_node not in visited :
-                heapq.heappush (heap, (euclideanHeuristic(next_node, goal_pos), next_node))
+                heapq.heappush (heap, (euclideanHeuristic(next_node, goal), next_node))
                 parent [next_node] = current
     return [], visited
 
@@ -140,4 +125,3 @@ def reconstruct_path ( start , goal , parent ) :
             return []
     path.reverse ( )
     return path
-    

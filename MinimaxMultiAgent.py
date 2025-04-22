@@ -206,7 +206,6 @@ class Pacman:
             score -= (100 - ghost_dist * 20)
             if ghost_dist < 2:
                 score -= 200  # Very big penalty if ghost is very close
-        
         return score
 
     def minimax_decision(self, ghost_pos):
@@ -215,11 +214,11 @@ class Pacman:
         
         for dx, dy in self.moves:
             nx, ny = self.pos[0] + dx, self.pos[1] + dy
-            if self.maze.can_move(nx, ny):
+            if self.maze.can_move(nx, ny , ) and (nx,ny) != ghost_pos :
                 new_pos = (nx, ny)
                 current_score = self.evaluate_state(new_pos, ghost_pos)
                 
-                # Slightly prefer continuing in same direction
+                # Slightly prefer continuing in same direction بيدي الأولوية انه يمشي في نفس الاتجاه
                 if (dx, dy) == (self.pos[0] - self.prevPos[0], self.pos[1] - self.prevPos[1]):
                     current_score += 5
                 

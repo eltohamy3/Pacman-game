@@ -283,8 +283,9 @@ class Ghost:
         self.game = game
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.path = []
-        self.speed = 0.3
+        self.speed = .5  # Increased ghost speed (originally 0.3)
         self.move_counter = 0
+
 
     def find_path_to_pacman(self, pacman_pos):
         queue = deque([(self.pos, [])])
@@ -340,14 +341,14 @@ class Pacman:
         self.alive = True
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.next_move = None
-        self.speed = 3  # Increased base speed
+        self.speed = 2  # Constant Pacman speed (faster than before)
         self.move_counter = 0
-        self.speed_boost_time = 0
         self.agent = MinimaxAgent(depth=2)
 
         if self.maze.is_dot_uneaten(x, y):
             self.maze.eat_dot(x, y)
             self.score += 10
+
 
     def update_speed(self):
         current_speed = 3
@@ -355,13 +356,13 @@ class Pacman:
             current_speed = 5
         self.speed = current_speed
 
+
     def update(self, ghost_pos):
-        self.update_speed()
         self.next_move = self.agent.getAction(self.pos, ghost_pos, self.maze)
 
     def move(self):
         self.move_counter += 1
-        if self.move_counter < max(0.1, 1/self.speed):  # Minimum 0.1s between moves
+        if self.move_counter < 1/self.speed:  # Constant speed calculation
             return False
             
         self.move_counter = 0
@@ -372,7 +373,6 @@ class Pacman:
             if self.maze.is_dot_uneaten(self.pos[0], self.pos[1]):
                 self.maze.eat_dot(self.pos[0], self.pos[1])
                 self.score += 10
-                self.speed_boost_time = time.time() + 2
                 
             if self.maze.all_dots_eaten():
                 self.all_goals_reached = True

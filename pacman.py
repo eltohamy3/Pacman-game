@@ -27,6 +27,7 @@ class Pacman :
                 closest_goal = goal
                 min_distance = distance
         return closest_goal
+
     def find_next_path(self, algorithm):
         self.path = []
         uneaten_dots = self.maze.get_uneaten_dots()

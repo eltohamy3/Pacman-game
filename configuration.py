@@ -1,17 +1,15 @@
 import pygame
-from search import *
 import mazeLayouts
-
-TILE_SIZE = 21
-# GRID_WIDTH, GRID_HEIGHT = 37, 37
-GRID_WIDTH , GRID_HEIGHT = 31 , 15
-WIDTH , HEIGHT = TILE_SIZE * GRID_WIDTH + 10 , TILE_SIZE * GRID_HEIGHT + 10
 
 # 31 * 15
 BIGSEARCH = mazeLayouts.BIGSEARCH
 
 # 37* 37
 BIGMAZE = mazeLayouts.BIGMAZE
+
+TILE_SIZE = 21
+GRID_WIDTH, GRID_HEIGHT = len(BIGMAZE[0]), len(BIGMAZE)
+WIDTH , HEIGHT = TILE_SIZE * GRID_WIDTH + 10 , TILE_SIZE * GRID_HEIGHT + 10
 
 pacman_right_path = [
     "assets/pacman-right/1.png" ,
@@ -70,6 +68,7 @@ pacman_directions = {
     'd' : pacman_down_path
 }
 
+from search import *
 search_algorithms = {
     'dfs': dfs,
     'bfs': bfs,
@@ -82,7 +81,9 @@ movement_direction = {
     (-1 , 0) : 'r' ,
     (1 , 0) : 'l' ,
     (0 , -1) : 'd' ,
-    (0 , 1) : 'u'
+    (0 , 1) : 'u',
+    (-GRID_WIDTH + 1, 0) : 'r',
+    (GRID_WIDTH - 1, 0) : 'l',
 }
 
 BLUE = (25 , 25 , 166)

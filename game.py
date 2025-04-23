@@ -6,21 +6,21 @@ pygame.font.init ( )
 
 class Maze :
     def __init__ ( self  , type) :
-        self.layout = BIGSEARCH
+        self.layout = BIGMAZE
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
-        self.type = type;  # 0 single gole  , 1 multi gole ,2 multi agent
+        self.type = type  # 0 single gole  , 1 multi gole, 2 multi agent
 
         if type ==1 :
             for y in range(GRID_HEIGHT):
                 for x in range(GRID_WIDTH):
                     if self.layout[y][x] == 0:
                         self.goals.add((x, y))
-
         elif type==0:
             self.goals.add((1, GRID_HEIGHT - 2))
         elif type==2:
             self.goals.add((2,3))
+
         # 2D array to track uneaten dots (True = uneaten, False = eaten)
         for x, y in self.goals:
             self.uneaten[y][x] = True
@@ -51,6 +51,11 @@ class Maze :
     def columns_len ( self ) :
         return len (  self.layout [0] ) if len (self.layout ) else 0
 
+    def is_gate(self, x, y):
+        if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
+            return self.layout[y][x] == 0 and (x == GRID_WIDTH - 1 or x == 0), x
+        return False
+
     def valid(self, x, y):
         if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
             return self.layout[y][x] == 0
@@ -63,14 +68,15 @@ class Maze :
                     rect = pygame.Rect ( x * TILE_SIZE , y * TILE_SIZE , TILE_SIZE * 1.6 , TILE_SIZE * 1.6 )
                     pygame.draw.rect ( screen , BLACK , rect )
 
-        # color all the nodes that have been visited
-        for x , y in visited :
-            pygame.draw.rect ( screen , VISITED_COLOR ,
-                               (x * TILE_SIZE + 7 , y * TILE_SIZE + 7 , TILE_SIZE , TILE_SIZE) )
+        if(self.type == 0):
+            # color all the nodes that have been visited
+            for x , y in visited :
+                pygame.draw.rect ( screen , VISITED_COLOR ,
+                                   (x * TILE_SIZE + 7 , y * TILE_SIZE + 7 , TILE_SIZE , TILE_SIZE) )
 
-        # color the path to goal
-        for x , y in path :
-            pygame.draw.rect ( screen , PATH_COLOR , (x * TILE_SIZE + 7 , y * TILE_SIZE + 7 , TILE_SIZE , TILE_SIZE) )
+            # color the path to goal
+            for x , y in path :
+                pygame.draw.rect ( screen , PATH_COLOR , (x * TILE_SIZE + 7 , y * TILE_SIZE + 7 , TILE_SIZE , TILE_SIZE) )
 
         # Draw dots for goals that haven't been eaten yet
         for x, y in self.get_uneaten_dots():
@@ -83,6 +89,7 @@ class Game :
         self.clock = pygame.time.Clock ( )
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
         self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
+        # self.start_pos = (24 , 7)
         self.running = True
         self.start_menu ( )
         self.path_history = []
@@ -184,20 +191,8 @@ class Game :
                         selecting = False
 
     def reset ( self ) :
-        # Show the menu again
         self.start_menu ( )
-
-        # Recreate Pacman and rerun the selected search
-        self.pacman = Pacman ( *self.start_pos, self.maze )
-        self.start_time = time.time ( )
-        self.end_time = None
-        search_fn = search_algorithms.get (self.algorithm )
-        if search_fn :
-            self.pacman.path , self.pacman.visited_nodes = search_fn ( self.maze , self.start_pos , self.maze.goals )
-            self.pacman.original_path = list ( self.pacman.path )
-        else :
-            self.visited_nodes = set ( )
-            self.original_path = []
+        self.run()
 
     def run ( self ) :
         while self.running :

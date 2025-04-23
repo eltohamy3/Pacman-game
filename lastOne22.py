@@ -161,184 +161,211 @@ class Ghost:
     def get_rect(self):
         return pygame.Rect(self.pos[0] * TILE_SIZE, self.pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
 
+import math
+from collections import deque
+import heapq
+import time
+
+import math
+from collections import deque
+import heapq
+
 class MinimaxAgent:
     def __init__(self, depth=3):
         self.depth = depth
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        self.last_positions = deque(maxlen=10)  # Longer memory for cycling detection
-        self.last_move = None
-    def apply_tiebreakers(self, moves, pacman_pos, ghost_pos, maze):
-        """Hierarchical tiebreaking system"""
-        # Stage 1: Directional consistency
-        if self.last_move:
-            consistent_moves = [
-                move for move in moves
-                if (move[0]-pacman_pos[0], move[1]-pacman_pos[1]) == self.last_move
-            ]
-            if consistent_moves:
-                return consistent_moves
+        self.path_cache = {}
+        self.ghost_danger_cache = {}
+        self.last_dot_path = []
         
-        # Stage 2: Dot proximity
-        uneaten_dots = maze.get_uneaten_dots()
-        if uneaten_dots:
-            nearest_dot = min(uneaten_dots, key=lambda d: manhattan_distance(pacman_pos, d))
-            dot_distances = [
-                (manhattan_distance(move, nearest_dot), move)
-                for move in moves
-            ]
-            min_dist = min(dot_distances)[0]
-            return [move for dist, move in dot_distances if dist == min_dist]
+    def bfs_shortest_path(self, start, target, maze):
+        """Calculate actual shortest path distance considering walls"""
+        if start == target:
+            return 0, [start]
+            
+        cache_key = (start, target)
+        if cache_key in self.path_cache:
+            return self.path_cache[cache_key]
+            
+        queue = deque([(start, [start])])
+        visited = set([start])
         
-        # Stage 3: Ghost avoidance
-        ghost_distances = [
-            (manhattan_distance(move, ghost_pos), move)
-            for move in moves
-        ]
-        max_dist = max(ghost_distances)[0]
-        return [move for dist, move in ghost_distances if dist == max_dist]
+        while queue:
+            pos, path = queue.popleft()
+            
+            for dx, dy in self.moves:
+                new_pos = (pos[0] + dx, pos[1] + dy)
+                if new_pos == target:
+                    result = (len(path), path)
+                    self.path_cache[cache_key] = result
+                    return result
+                    
+                if maze.can_move(*new_pos) and new_pos not in visited:
+                    visited.add(new_pos)
+                    queue.append((new_pos, path + [new_pos]))
+        
+        # No path found (shouldn't happen in valid maze)
+        return float('inf'), []
+
+    def calculate_ghost_danger(self, ghost_pos, maze, steps=3):
+        """Calculate all positions ghost could reach in next N steps"""
+        cache_key = (*ghost_pos, steps)
+        if cache_key in self.ghost_danger_cache:
+            return self.ghost_danger_cache[cache_key]
+            
+        danger_zones = set()
+        queue = deque([(ghost_pos, 0)])
+        visited = set([ghost_pos])
+        
+        while queue:
+            pos, current_steps = queue.popleft()
+            danger_zones.add(pos)
+            
+            if current_steps >= steps:
+                continue
+                
+            for dx, dy in self.moves:
+                new_pos = (pos[0] + dx, pos[1] + dy)
+                if maze.can_move(*new_pos) and new_pos not in visited:
+                    visited.add(new_pos)
+                    queue.append((new_pos, current_steps + 1))
+        
+        self.ghost_danger_cache[cache_key] = danger_zones
+        return danger_zones
 
     def evaluationFunction(self, pacman_pos, ghost_pos, maze):
-        """
-        Ultimate evaluation function with guaranteed decision-making
-        Returns a float score where equality is virtually impossible
-        """
-        score = 0.0  # Using float for more granular scores
-        pac_x, pac_y = pacman_pos
-        ghost_x, ghost_y = ghost_pos
-        uneaten_dots = maze.get_uneaten_dots()
-        num_dots = len(uneaten_dots)
+        """Advanced evaluation considering paths and walls"""
+        score = 0
+        immediate_danger = False
         
-        # 1. Primary Objectives (large weights)
-        # -------------------------------------
-        # Immediate dot collection
-        if maze.is_dot_uneaten(pac_x, pac_y):
-            score += 500 * (1 + num_dots/len(maze.goals))  # Scaling reward
+        # 1. GHOST DANGER ASSESSMENT (survival first)
+        ghost_dist, ghost_path = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
+        danger_zones = self.calculate_ghost_danger(ghost_pos, maze, 3)
         
-        # Nearest dot distance (inverse exponential)
-        if uneaten_dots:
-            nearest_dot = min(uneaten_dots, key=lambda d: manhattan_distance(pacman_pos, d))
-            dist = manhattan_distance(pacman_pos, nearest_dot)
-            score += 100 * math.exp(-0.5 * dist)  # Rapidly decreasing reward
-        
-        # 2. Ghost Avoidance (dynamic weights)
-        # ------------------------------------
-        ghost_dist = manhattan_distance(pacman_pos, ghost_pos)
-        
-        # Danger zones (non-linear)
-        if ghost_dist < 8:
-            danger = (9 - ghost_dist) ** 2.5  # Sharp increase
-            score -= 25 * danger
+        if ghost_dist <= 2:  # Ghost can reach us in 1-2 moves
+            immediate_danger = True
+            score -= 1000000  # Must escape immediately
+        elif ghost_dist <= 5:
+            danger_level = (6 - ghost_dist) ** 3
+            score -= danger_level * 1000
             
-            # Directional danger
-            if (pac_x == ghost_x or pac_y == ghost_y) and ghost_dist < 5:
-                score -= 50 * danger
-        
-        # 3. Strategic Positioning (medium weights)
-        # ----------------------------------------
-        # Center control bonus
-        center_x, center_y = GRID_WIDTH/2, GRID_HEIGHT/2
-        center_dist = math.sqrt((pac_x-center_x)**2 + (pac_y-center_y)**2)
-        score += 30/(1 + center_dist)
-        
-        # Mobility bonus
-        valid_moves = sum(1 for dx, dy in self.moves if maze.can_move(pac_x+dx, pac_y+dy))
-        score += 10 * valid_moves
-        
-        # 4. Anti-Cycling Mechanisms (small weights)
-        # ------------------------------------------
-        # Recent position penalty
-        for i, pos in enumerate(reversed(self.last_positions)):
-            if pos == pacman_pos:
-                score -= 30/(i+1)  # Decaying penalty
-        
-        # Direction change penalty
-        if self.last_move and len(self.last_positions) >= 2:
-            prev_move = self.last_move
-            current_move = (pac_x - self.last_positions[-1][0], 
-                          pac_y - self.last_positions[-1][1])
-            if prev_move != current_move:
-                score -= 15
-        
-        # 5. Micro-Optimizations (tiny weights)
-        # -------------------------------------
-        # Position-based hash (unique per cell)
-        position_hash = (pac_x * 31 + pac_y) / 1000  # 0-1 scaled
-        score += position_hash * 0.001
-        
-        # Dot density in 5x5 area
-        nearby_dots = sum(1 for x,y in uneaten_dots 
-                         if abs(x-pac_x) <= 2 and abs(y-pac_y) <= 2)
-        score += nearby_dots * 0.1
+        # 2. DOT COLLECTION (only when safe)
+        if not immediate_danger:
+            uneaten_dots = maze.get_uneaten_dots()
+            
+            # On a dot - absolute priority
+            if maze.is_dot_uneaten(*pacman_pos):
+                score += 50000
+            elif uneaten_dots:
+                # Find nearest reachable dot with BFS
+                dot_distances = [self.bfs_shortest_path(pacman_pos, dot, maze) for dot in uneaten_dots]
+                if dot_distances:
+                    dot_dist, dot_path = min(dot_distances, key=lambda x: x[0])
+                else:
+                    dot_dist, dot_path = float('inf'), []
+                
+                if dot_dist < float('inf'):
+                    # Reward shorter paths more
+                    path_bonus = 1000 / (1 + dot_dist)
+                    score += path_bonus
+                    
+                    # Reward clearing clusters
+                    nearby_dots = sum(
+                        1 for other_dot in uneaten_dots 
+                        if self.bfs_shortest_path(dot_path[-1], other_dot, maze)[0] <= 3
+                    )
+                    score += nearby_dots * 30
+                    
+                    # Cache the best dot path
+                    self.last_dot_path = dot_path[1:] if len(dot_path) > 1 else []
+
+        # 3. PATH SMOOTHNESS (encourage continuous paths)
+        if len(self.last_dot_path) > 1 and pacman_pos == self.last_dot_path[0]:
+            score += 50  # Bonus for following planned path
+            
+        # 4. MICRO-OPTIMIZATIONS (ensure unique scores)
+        score += (pacman_pos[0] * 31 + pacman_pos[1]) * 0.00001
         
         return score
-    def find_nearest_dot(self, pos, maze):
-        uneaten_dots = maze.get_uneaten_dots()
-        if not uneaten_dots:
-            return None
-            
-        return min(uneaten_dots, key=lambda dot: manhattan_distance(pos, dot))
-    
-    def minimax(self, pacman_pos, ghost_pos, maze, depth, alpha, beta, maximizing_player):
-        if depth == 0 or maze.all_dots_eaten() or manhattan_distance(pacman_pos, ghost_pos) < 1:
-            return self.evaluationFunction(pacman_pos, ghost_pos, maze)
-            
-        if maximizing_player:  # Pacman's turn (maximize)
-            max_eval = -float('inf')
-            for dx, dy in self.moves:
-                new_x, new_y = pacman_pos[0] + dx, pacman_pos[1] + dy
-                if maze.can_move(new_x, new_y):
-                    eval = self.minimax((new_x, new_y), ghost_pos, maze, depth-1, alpha, beta, False)
-                    max_eval = max(max_eval, eval)
-                    alpha = max(alpha, eval)
-                    if beta <= alpha:
-                        break  # Beta pruning
-            return max_eval
-        else:  # Ghost's turn (minimize)
-            min_eval = float('inf')
-            for dx, dy in self.moves:
-                new_x, new_y = ghost_pos[0] + dx, ghost_pos[1] + dy
-                if maze.can_move(new_x, new_y):
-                    eval = self.minimax(pacman_pos, (new_x, new_y), maze, depth-1, alpha, beta, True)
-                    min_eval = min(min_eval, eval)
-                    beta = min(beta, eval)
-                    if beta <= alpha:
-                        break  # Alpha pruning
-            return min_eval
-    
     def getAction(self, pacman_pos, ghost_pos, maze):
-        self.last_positions.append(pacman_pos)
-        
-        # Generate all valid moves
+        # Clear cache periodically
+        if len(self.path_cache) > 2000:
+            self.path_cache.clear()
+        if len(self.ghost_danger_cache) > 2000:
+            self.ghost_danger_cache.clear()
+            
+        # 1. Check if we're on a dot - eat it immediately
+        if maze.is_dot_uneaten(*pacman_pos):
+            return pacman_pos
+            
+        # 2. Get all possible moves
         possible_moves = []
         for dx, dy in self.moves:
             new_pos = (pacman_pos[0] + dx, pacman_pos[1] + dy)
             if maze.can_move(*new_pos):
                 possible_moves.append(new_pos)
-        
+                
         if not possible_moves:
-            return pacman_pos  # No valid moves
+            return pacman_pos
+            
+        # 3. Check immediate ghost danger
+        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
+        danger_zones = self.calculate_ghost_danger(ghost_pos, maze, 3)
         
-        # Evaluate all moves with minimax
-        scored_moves = []
+        # 4. If in immediate danger, escape
+        if ghost_dist <= 2:
+            safe_moves = [m for m in possible_moves if m not in danger_zones]
+            if safe_moves:
+                # Choose safe move that maximizes distance from ghost
+                return max(safe_moves,
+                         key=lambda m: self.bfs_shortest_path(m, ghost_pos, maze)[0])
+            # If no safe moves, run to farthest position
+            return max(possible_moves,
+                     key=lambda m: self.bfs_shortest_path(m, ghost_pos, maze)[0])
+                     
+        # 5. Normal minimax evaluation
+        best_score = -float('inf')
+        best_move = possible_moves[0]
+        
         for move in possible_moves:
             score = self.minimax(move, ghost_pos, maze, self.depth,
                                -float('inf'), float('inf'), False)
-            scored_moves.append((score, move))
-        
-        # Find all moves with maximum score
-        max_score = max(scored_moves, key=lambda x: x[0])[0]
-        best_moves = [move for score, move in scored_moves if abs(score - max_score) < 1e-6]
-        
-        # Apply tiebreakers if needed
-        if len(best_moves) > 1:
-            best_moves = self.apply_tiebreakers(best_moves, pacman_pos, ghost_pos, maze)
-        
-        # Update last move direction
-        chosen_move = best_moves[0]
-        self.last_move = (chosen_move[0] - pacman_pos[0], 
-                         chosen_move[1] - pacman_pos[1])
-        
-        return chosen_move
+            if score > best_score:
+                best_score = score
+                best_move = move
+                
+        return best_move
+
+    def minimax(self, pacman_pos, ghost_pos, maze, depth, alpha, beta, maximizing_player):
+        if depth == 0 or maze.all_dots_eaten():
+            return self.evaluationFunction(pacman_pos, ghost_pos, maze)
+            
+        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
+        if ghost_dist <= 1:  # Ghost caught us in this path
+            return -float('inf') if maximizing_player else float('inf')
+            
+        if maximizing_player:  # Pacman's turn
+            max_eval = -float('inf')
+            for dx, dy in self.moves:
+                new_pos = (pacman_pos[0] + dx, pacman_pos[1] + dy)
+                if maze.can_move(*new_pos):
+                    eval = self.minimax(new_pos, ghost_pos, maze, depth-1, alpha, beta, False)
+                    max_eval = max(max_eval, eval)
+                    alpha = max(alpha, eval)
+                    if beta <= alpha:
+                        break
+            return max_eval
+        else:  # Ghost's turn
+            min_eval = float('inf')
+            for dx, dy in self.moves:
+                new_pos = (ghost_pos[0] + dx, ghost_pos[1] + dy)
+                if maze.can_move(*new_pos):
+                    eval = self.minimax(pacman_pos, new_pos, maze, depth-1, alpha, beta, True)
+                    min_eval = min(min_eval, eval)
+                    beta = min(beta, eval)
+                    if beta <= alpha:
+                        break
+            return min_eval
 def manhattan_distance(pos1, pos2):
     return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
 

@@ -8,7 +8,7 @@ BIGSEARCH = mazeLayouts.BIGSEARCH
 BIGMAZE = mazeLayouts.BIGMAZE
 
 TILE_SIZE = 21
-GRID_WIDTH, GRID_HEIGHT = len(BIGSEARCH[0]), len(BIGSEARCH)
+GRID_WIDTH, GRID_HEIGHT = len(BIGMAZE[0]), len(BIGMAZE)
 WIDTH , HEIGHT = TILE_SIZE * GRID_WIDTH + 10 , TILE_SIZE * GRID_HEIGHT + 10
 
 pacman_right_path = [
@@ -48,13 +48,10 @@ single_goal_menu_keys = {
     pygame.K_e : 'greedy' ,
 }
 
-
 multigoal_menu_keys = {
     pygame.K_a : 'dfs' ,
     pygame.K_b : 'bfs' ,
 }
-
-
 
 game_mode = [
     ("a- Single Goal" , pygame.K_a) ,

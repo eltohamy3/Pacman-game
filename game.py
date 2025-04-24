@@ -13,11 +13,10 @@ class Game:
         pygame.display.set_caption ("Pacman Game")
         self.clock = pygame.time.Clock ()
         self.font = pygame.font.SysFont ('arial',20,bold = True)
-        # self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
-        self.start_pos = (15,GRID_HEIGHT - 2)
+        self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
+        # self.start_pos = (15,GRID_HEIGHT - 2)
         self.running = True
         self.start_menu ()
-        # self.pacman = Pacman(*self.start_pos, self.maze)
         self.path_history = []
 
     def set_algorithm ( self,name ):
@@ -28,8 +27,7 @@ class Game:
 
     def draw ( self ):
         self.screen.fill (BLUE)
-        self.maze.draw (self.screen,self.pacman.visited_nodes,self.pacman.original_path)
-        # if not self.pacman.all_goals_reached:
+        self.maze.draw (self.screen, self.pacman.visited_nodes, self.pacman.original_path)
         self.pacman.draw (self.screen)
 
         goals_eaten = len (self.maze.goals) - len (self.maze.get_uneaten_dots ())
@@ -85,7 +83,7 @@ class Game:
                 self.path_history.append (self.pacman.pos)
                 pygame.time.wait (120)  # Delay for visualization
 
-    def key_pressed ( self ):
+    def get_key ( self ):
         for event in pygame.event.get ():
             if event.type == pygame.QUIT:
                 pygame.quit ()
@@ -94,20 +92,23 @@ class Game:
                 return event.key
         return -1
 
+    def display_screen(self, text, mode):
+        self.screen.fill(BLACK)
+        self.font = pygame.font.Font(None, 40)
+        title = self.font.render(text, True, GREEN)
+        self.screen.blit(title, (WIDTH // 2 - title.get_width() // 2, 40))
+        self.font = pygame.font.Font(None, 30)
+        for i, (text, _) in enumerate(mode):
+            option_text = self.font.render(text, True, WHITE)
+            self.screen.blit(option_text, (20, 120 + i * 40))
+        pygame.display.flip()
+
     def single_goal_start_menu ( self ):
         selecting = True
         self.maze = SingleGoalMaze()
         while selecting:
-            self.screen.fill (BLACK)
-            self.font = pygame.font.Font (None,40)
-            title = self.font.render ("Single goal",True,GREEN)
-            self.screen.blit (title,(WIDTH // 2 - title.get_width () // 2,40))
-            self.font = pygame.font.Font (None,24)
-            for i,(text,_) in enumerate (single_goal_options):
-                option_text = self.font.render (text,True,WHITE)
-                self.screen.blit (option_text,(WIDTH // 4,120 + i * 40))
-            pygame.display.flip ()
-            key = self.key_pressed ()
+            self.display_screen("Single goal", single_goal_options)
+            key = self.get_key()
             if key in single_goal_menu_keys:
                 self.set_algorithm (single_goal_menu_keys [key])
                 selecting = False
@@ -116,16 +117,8 @@ class Game:
         selecting = True
         self.maze = MultiGoalMaze()
         while selecting:
-            self.screen.fill (BLACK)
-            self.font = pygame.font.Font (None,40)
-            title = self.font.render ("Multigoal goal",True,GREEN)
-            self.screen.blit (title,(WIDTH // 2 - title.get_width () // 2,40))
-            self.font = pygame.font.Font (None,24)
-            for i,(text,_) in enumerate (multigoal_options):
-                option_text = self.font.render (text,True,WHITE)
-                self.screen.blit (option_text,(WIDTH // 4,120 + i * 40))
-            pygame.display.flip ()
-            key = self.key_pressed ()
+            self.display_screen("Multigoal goal", multigoal_options)
+            key = self.get_key()
             if key in multigoal_menu_keys:
                 self.set_algorithm (multigoal_menu_keys [key])
                 selecting = False
@@ -133,33 +126,14 @@ class Game:
     def start_menu ( self ):
         selecting = True
         while selecting:
-            self.screen.fill (BLACK)
-            self.font = pygame.font.Font (None,40)
-            title = self.font.render ("Select Game Mode",True,GREEN)
-            self.screen.blit (title,(WIDTH // 2 - title.get_width () // 2,40))
-            self.font = pygame.font.Font (None,24)
-            for i,(text,_) in enumerate (game_mode):
-                option_text = self.font.render (text,True,WHITE)
-                self.screen.blit (option_text,(20,120 + i * 40))
-
-            pygame.display.flip ()
-
-            key = self.key_pressed ()
+            self.display_screen("Select Game Mode", game_mode)
+            key = self.get_key()
             if key in start_menu_keys:
                 if key == pygame.K_a:
                     self.single_goal_start_menu ()
                 else:
                     self.multigoal_start_menu ()
                 selecting = False
-
-            # for i , (text , _) in enumerate ( multigoal_options ) :
-            #     option_text = self.font.render ( text , True , WHITE )
-            #     if(i < 5):
-            #         self.screen.blit (option_text , (20 , 120 + i * 40) )
-            #     else:
-            #         self.screen.blit(option_text, (WIDTH // 2 + 20, 120 + (i - 5) * 40))
-            #
-            # pygame.display.flip ( )
 
     def reset ( self ):
         self.start_menu ()

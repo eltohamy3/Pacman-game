@@ -4,12 +4,12 @@ from configuration import *
 
 class Maze:
     def __init__(self):
-        self.layout = BIGSEARCH
+        self.layout = BIGMAZE
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
         # 2D array to track uneaten dots (True = uneaten, False = eaten)
 
-    def eat_dot(self,x,y):
+    def eat_dot(self, x, y):
         if 0<=x<GRID_WIDTH and 0<=y<GRID_HEIGHT:
             self.uneaten[y][x] = False
 
@@ -26,22 +26,15 @@ class Maze:
                     uneaten_dots.add((x,y))
         return uneaten_dots
 
-
     def all_dots_eaten(self):
         return len(self.get_uneaten_dots()) == 0
 
-    def rows_len(self):
-        return len(self.layout)
-
-    def columns_len(self):
-        return len(self.layout[0]) if len(self.layout) else 0
-
     def is_gate(self,x,y):
         if 0<=x<GRID_WIDTH and 0<=y<GRID_HEIGHT:
-            return self.layout[y][x] == 0 and (x == GRID_WIDTH - 1 or x == 0),x
+            return self.layout[y][x] == 0 and (x == GRID_WIDTH - 1 or x == 0)
         return False
 
-    def valid(self,x,y):
+    def is_valid(self,x,y):
         if 0<=x<GRID_WIDTH and 0<=y<GRID_HEIGHT:
             return self.layout[y][x] == 0
         return False
@@ -49,25 +42,6 @@ class Maze:
     @abstractmethod
     def draw(self,screen,visited,path):
         pass
-        # for y in range(GRID_HEIGHT):
-        #     for x in range(GRID_WIDTH):
-        #         if self.layout[y][x] == 0 or self.layout[y][x] == 2:
-        #             rect = pygame.Rect(x * TILE_SIZE,y * TILE_SIZE,TILE_SIZE * 1.6,TILE_SIZE * 1.6)
-        #             pygame.draw.rect(screen,BLACK,rect)
-        #
-        # if (self.type == 0):
-        #     # color all the nodes that have been visited
-        #     for x,y in visited:
-        #         pygame.draw.rect(screen,VISITED_COLOR,
-        #                          (x * TILE_SIZE + 7,y * TILE_SIZE + 7,TILE_SIZE,TILE_SIZE))
-        #
-        #     # color the path to goal
-        #     for x,y in path:
-        #         pygame.draw.rect(screen,PATH_COLOR,(x * TILE_SIZE + 7,y * TILE_SIZE + 7,TILE_SIZE,TILE_SIZE))
-        #
-        # # Draw dots for goals that haven't been eaten yet
-        # for x,y in self.get_uneaten_dots():
-        #     pygame.draw.circle(screen,DOT_COLOR,(x * TILE_SIZE + TILE_SIZE // 2,y * TILE_SIZE + TILE_SIZE // 2),4)
 
 class MultiGoalMaze(Maze):
     def __init__(self):
@@ -76,8 +50,10 @@ class MultiGoalMaze(Maze):
             for x in range(GRID_WIDTH):
                 if self.layout[y][x] == 0:
                     self.goals.add((x,y))
+
         for x,y in self.goals:
             self.uneaten[y][x] = True
+
     def draw(self,screen,visited,path):
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
@@ -96,12 +72,14 @@ class SingleGoalMaze(Maze):
         self.goals.add((1,GRID_HEIGHT - 2))
         for x,y in self.goals:
             self.uneaten[y][x] = True
+
     def draw(self,screen,visited,path):
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 if self.layout[y][x] == 0 or self.layout[y][x] == 2:
                     rect = pygame.Rect(x * TILE_SIZE,y * TILE_SIZE,TILE_SIZE * 1.6,TILE_SIZE * 1.6)
                     pygame.draw.rect(screen,BLACK,rect)
+
             # color all the nodes that have been visited
             for x,y in visited:
                 pygame.draw.rect(screen,VISITED_COLOR,
@@ -113,7 +91,3 @@ class SingleGoalMaze(Maze):
         # Draw dots for goals that haven't been eaten yet
         for x,y in self.get_uneaten_dots():
             pygame.draw.circle(screen,DOT_COLOR,(x * TILE_SIZE + TILE_SIZE // 2,y * TILE_SIZE + TILE_SIZE // 2),4)
-
-
-
-

@@ -228,7 +228,7 @@ class Pacman:
             
             for dx, dy in self.moves:
                 nx, ny = pacman_pos[0] + dx, pacman_pos[1] + dy
-                if self.maze.can_move(nx, ny):
+                if self.maze.can_move(nx, ny) and (nx,ny) !=ghost_pos :
                     eval, _ = self.minimax((nx, ny), ghost_pos, depth-1, False, alpha, beta)
                     
                     if eval > max_eval:

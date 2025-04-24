@@ -3,6 +3,7 @@ import random
 import pygame
 import time
 from collections import deque
+from configuration import *
 
 # Initialize pygame
 pygame.init()
@@ -12,16 +13,6 @@ pygame.font.init()
 TILE_SIZE = 21
 GRID_WIDTH, GRID_HEIGHT = 31, 15
 WIDTH, HEIGHT = TILE_SIZE * GRID_WIDTH + 10, TILE_SIZE * GRID_HEIGHT + 10
-
-# Colors
-BLUE = (24, 24, 217)
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GOAL_COLOR = (255, 0, 0)
-GREEN = (0, 255, 0)
-DOT_COLOR = (255, 255, 0)  # Yellow dots
-GHOST_COLOR = (255, 0, 0)  # Red ghost
-WALL_COLOR = (0, 0, 139)  # Darker blue for walls
 
 # Maze layout
 BIGSEARCH = [
@@ -41,7 +32,6 @@ BIGSEARCH = [
     [1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
 ]
-
 
 class Maze:
     def __init__(self):
@@ -82,16 +72,12 @@ class Maze:
     def draw(self, screen):
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
-                if self.layout[y][x] == 1:
-                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-                    pygame.draw.rect(screen, WALL_COLOR, rect)
-                elif self.layout[y][x] in [0, 2]:
+                if self.layout[y][x] == 0 or self.layout[y][x] == 2:
                     rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE * 1.6, TILE_SIZE * 1.6)
                     pygame.draw.rect(screen, BLACK, rect)
 
         for x, y in self.get_uneaten_dots():
             pygame.draw.circle(screen, DOT_COLOR, (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2), 4)
-
 
 class Ghost:
     def __init__(self, x, y, maze, game):
@@ -135,18 +121,14 @@ class Ghost:
         return False
 
     def draw(self, screen):
-        x, y = self.pos
-        ghost_rect = pygame.Rect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4)
-        pygame.draw.rect(screen, GHOST_COLOR, ghost_rect)
-        eye_radius = 3
-        left_eye_pos = (x * TILE_SIZE + 7, y * TILE_SIZE + 7)
-        right_eye_pos = (x * TILE_SIZE + TILE_SIZE - 7, y * TILE_SIZE + 7)
-        pygame.draw.circle(screen, WHITE, left_eye_pos, eye_radius)
-        pygame.draw.circle(screen, WHITE, right_eye_pos, eye_radius)
+        x = self.pos[0] * TILE_SIZE
+        y = self.pos[1] * TILE_SIZE
+        ghost_img = pygame.image.load(blinky_ghost)
+        ghost_img = pygame.transform.scale(ghost_img, (TILE_SIZE, TILE_SIZE))
+        screen.blit(ghost_img, (x, y))
 
     def get_rect(self):
         return pygame.Rect(self.pos[0] * TILE_SIZE, self.pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-
 
 class Pacman:
     def __init__(self, x, y, maze):
@@ -163,6 +145,7 @@ class Pacman:
         self.move_counter = 0
         self.last_dot_time = time.time()
         self.dot_check_interval = 2  # Check for nearest dot every 2 seconds
+        self.frame_idx = 0
 
         if self.maze.is_dot_uneaten(x, y):
             self.maze.eat_dot(x, y)
@@ -307,26 +290,27 @@ class Pacman:
             return True
         return False
 
-    def get_direction(self):
-        (pos_x, pos_y) = (self.prevPos[0] - self.pos[0], self.prevPos[1] - self.pos[1])
-        self.dir = {(-1, 0): 'r', (1, 0): 'l', (0, -1): 'd', (0, 1): 'u'}.get((pos_x, pos_y), self.dir)
+    def get_direction ( self , screen ) :
+        (pos_x , pos_y) = (self.prevPos [0] - self.pos [0] , self.prevPos [1] - self.pos [1])
+        self.dir = movement_direction.get ( (pos_x , pos_y) )
+
+    def update_frame ( self , screen ) :
+        x = self.pos [0] * TILE_SIZE
+        y = self.pos [1] * TILE_SIZE
+
+        pacman_dir = pacman_directions.get ( self.dir )
+        self.frame_idx = self.frame_idx % len ( pacman_dir )
+
+        pacman_img = pygame.image.load ( pacman_dir [self.frame_idx] )
+        pacman_img = pygame.transform.scale ( pacman_img , (TILE_SIZE , TILE_SIZE) )
+        screen.blit ( pacman_img , (x , y) )
+
+        if not self.all_goals_reached:
+            self.frame_idx += 1
 
     def draw(self, screen):
-        if self.alive:
-            self.get_direction()
-            x = self.pos[0] * TILE_SIZE
-            y = self.pos[1] * TILE_SIZE
-            pacman_rect = pygame.Rect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
-            pygame.draw.circle(screen, DOT_COLOR, pacman_rect.center, TILE_SIZE // 2 - 2)
-        else:
-            x, y = self.pos
-            center_x = x * TILE_SIZE + TILE_SIZE // 2
-            center_y = y * TILE_SIZE + TILE_SIZE // 2
-            size = TILE_SIZE // 2 - 2
-            pygame.draw.line(screen, DOT_COLOR, (center_x - size, center_y - size),
-                           (center_x + size, center_y + size), 2)
-            pygame.draw.line(screen, DOT_COLOR, (center_x - size, center_y + size),
-                           (center_x + size, center_y - size), 2)
+        self.get_direction(screen)
+        self.update_frame(screen)
 
     def get_rect(self):
         return pygame.Rect(self.pos[0] * TILE_SIZE, self.pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -433,7 +417,6 @@ class Game:
 
             self.draw()
         pygame.quit()
-
 
 if __name__ == "__main__":
     game = Game()

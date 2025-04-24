@@ -8,7 +8,7 @@ BIGSEARCH = mazeLayouts.BIGSEARCH
 BIGMAZE = mazeLayouts.BIGMAZE
 
 TILE_SIZE = 21
-GRID_WIDTH, GRID_HEIGHT = len(BIGMAZE[0]), len(BIGMAZE)
+GRID_WIDTH, GRID_HEIGHT = len(BIGSEARCH[0]), len(BIGSEARCH)
 WIDTH , HEIGHT = TILE_SIZE * GRID_WIDTH + 10 , TILE_SIZE * GRID_HEIGHT + 10
 
 pacman_right_path = [
@@ -34,6 +34,12 @@ pacman_down_path = [
     "assets/pacman-down/2.png" ,
     "assets/pacman-down/3.png"
 ]
+
+blinky_ghost = "assets/ghosts/blinky.png"
+blue_ghost = "assets/ghosts/blue_ghost.png"
+clyde_ghost = "assets/ghosts/clyde.png"
+inky_ghost = "assets/ghosts/inky.png"
+pinky_ghost = "assets/ghosts/pinky.png"
 
 start_menu_keys = {
     pygame.K_a : 'single_goal_menu' ,

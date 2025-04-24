@@ -105,54 +105,45 @@ class MinimaxAgent:
         self.last_new_area_time = time.time()
         self.position_history = deque(maxlen=10)
         self.state_hash_seed = random.randint(1, 10000)
-        self.dot_value = 50000  # Increased pellet value
-        self.ghost_danger_zone = 5
-        self.dot_cluster_bonus = 1.5  # Bonus for pellet clusters
 
     def get_state_hash(self, pacman_pos, ghost_pos):
         return (pacman_pos[0] * 3571 + pacman_pos[1] * 6421 + 
                ghost_pos[0] * 9973 + ghost_pos[1] * 7919) ^ self.state_hash_seed
 
     def evaluate_state(self, pacman_pos, ghost_pos, maze):
+        # Immediately lose if pacman is on ghost
+        if pacman_pos == ghost_pos:
+            return -float('inf')
+            
         state_hash = self.get_state_hash(pacman_pos, ghost_pos)
         score = 0.0
         uneaten_dots = maze.get_uneaten_dots()
         num_dots = len(uneaten_dots)
+
         
-        # Pellet collection with hash-based variations
         if maze.is_dot_uneaten(*pacman_pos):
-            base = self.dot_value + (state_hash % 100)
+            base = 10000 + (state_hash % 100)
             walls = sum(1 for dx, dy in self.moves 
                        if not maze.can_move(pacman_pos[0]+dx, pacman_pos[1]+dy))
             score += base * (1 + walls/2)
-            if num_dots <= 5:  # Increased end-game bonus
-                score += (self.dot_value//2 + (state_hash % 50)) * (6 - num_dots)
+            if num_dots <= 3:
+                score += (5000 + (state_hash % 50)) * (4 - num_dots)
         
-        # Ghost avoidance with hash-based danger scaling
-        ghost_dist, ghost_path = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
+        ghost_dist, ghost_path = self.bfs_shortest_path(pacman_pos, ghost_pos, maze, ghost_pos)
         if ghost_dist <= 2:
             return -float('inf') * (1 + (state_hash % 10) * 0.01)
-        elif ghost_dist <= self.ghost_danger_zone:
-            danger = (self.ghost_danger_zone - ghost_dist) ** 3 * (1 + (state_hash % 20) * 0.005)
-            score -= danger * 10000  # Strong penalty but less than pellet value
+        elif ghost_dist <= 5:
+            danger = (6 - ghost_dist) ** 3 * (1 + (state_hash % 20) * 0.005)
+            score -= danger * 5000
         
-        # Strategic pellet pathing with hash-based variations
         if ghost_dist > 3 and uneaten_dots:
             dot_scores = []
             for dot in uneaten_dots:
-                dist, path = self.bfs_shortest_path(pacman_pos, dot, maze)
+                dist, path = self.bfs_shortest_path(pacman_pos, dot, maze, ghost_pos)
                 if dist < float('inf'):
-                    density = self.calculate_dot_density(dot, maze, radius=3)
+                    density = self.calculate_dot_density(dot, maze)
                     dot_hash = dot[0] * 123 + dot[1] * 321
-                    path_safety = self.assess_path_safety(path, ghost_pos, maze)
-                    
-                    # Cluster-aware scoring with hash-based variation
-                    dot_score = (self.dot_value / (1 + dist)) * \
-                               (1 + density * 0.3) * \
-                               (1 + (dot_hash % 20) * 0.001 * \
-                               path_safety * \
-                               self.dot_cluster_bonus
-                    
+                    dot_score = (5000 / (1 + dist)) * (1 + density * 0.2) * (1 + (dot_hash % 20) * 0.001)
                     dot_scores.append((dot_score, path))
             
             if dot_scores:
@@ -160,43 +151,31 @@ class MinimaxAgent:
                 score += best_score
                 self.last_dot_path = best_path[1:] if len(best_path) > 1 else []
 
-        # Exploration management with hash-based variations
         visit_count = self.visited_positions.get(pacman_pos, 0)
-        score -= visit_count * 30 * (1 + (state_hash % 5) * 0.01)
-        
+        score -= visit_count * 50
         if pacman_pos not in self.visited_positions:
-            score += 150 * (1 + (state_hash % 10) * 0.01)
+            score += 100 * (1 + (state_hash % 10) * 0.01)
             if time.time() - self.last_new_area_time > 10:
-                score += 300 * (1 + (state_hash % 5) * 0.01)
+                score += 200 * (1 + (state_hash % 5) * 0.01)
         
-        # Movement consistency with hash-based variations
         if self.prevPos:
             current_dir = (pacman_pos[0]-self.prevPos[0], pacman_pos[1]-self.prevPos[1])
             if current_dir in self.moves:
                 dir_hash = current_dir[0] * 11 + current_dir[1] * 13
-                score += 25 * (1 + (dir_hash % 10) * 0.01)
+                score += 20 * (1 + (dir_hash % 10) * 0.01)
         
-        # Hash-based noise to break ties
         score += (state_hash % 1000) * 0.001
         score += (time.time() % 0.1) * 0.0001
         
         return score
 
-    def assess_path_safety(self, path, ghost_pos, maze):
-        min_safety = 1.0
-        for pos in path:
-            dist, _ = self.bfs_shortest_path(pos, ghost_pos, maze)
-            if dist <= 2:
-                return 0.01  # Extremely dangerous
-            elif dist <= 4:
-                min_safety = min(min_safety, 0.5)  # Moderately dangerous
-        return min_safety
-
     def getAction(self, pacman_pos, ghost_pos, maze):
         self.position_history.append(pacman_pos)
         self.visited_positions[pacman_pos] = self.visited_positions.get(pacman_pos, 0) + 1
         
-        # Always eat pellet if on one
+        if pacman_pos not in self.visited_positions:
+            self.last_new_area_time = time.time()
+        
         if maze.is_dot_uneaten(*pacman_pos):
             self.prevPos = pacman_pos
             return pacman_pos
@@ -204,39 +183,29 @@ class MinimaxAgent:
         possible_moves = []
         for dx, dy in self.moves:
             new_pos = (pacman_pos[0] + dx, pacman_pos[1] + dy)
-            if maze.can_move(*new_pos) and new_pos != ghost_pos:
+            if maze.can_move(*new_pos) and new_pos != ghost_pos:  # Add ghost position check
                 possible_moves.append(new_pos)
         
         if not possible_moves:
             self.prevPos = pacman_pos
             return pacman_pos
             
-        # Emergency ghost avoidance
-        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
-        if ghost_dist <= 3:
+        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze, ghost_pos)
+        if ghost_dist <= 2:
             escape_moves = []
             for move in possible_moves:
-                new_dist, _ = self.bfs_shortest_path(move, ghost_pos, maze)
+                new_dist, _ = self.bfs_shortest_path(move, ghost_pos, maze, ghost_pos)
                 escape_moves.append((new_dist, move))
             self.prevPos = pacman_pos
             return max(escape_moves, key=lambda x: x[0])[1]
         
-        # Normal operation - maximize pellet collection
         best_score = -float('inf')
         best_move = possible_moves[0]
         
         for move in possible_moves:
-            # Immediate pellet check
-            move_score = 0
-            if maze.is_dot_uneaten(*move):
-                move_score += self.dot_value * 1.5  # Bonus for immediate pellets
-            
-            # Future evaluation
-            eval_score = self.minimax(move, ghost_pos, maze, self.depth-1, -float('inf'), float('inf'), False)
-            total_score = move_score + eval_score
-            
-            if total_score > best_score:
-                best_score = total_score
+            score = self.minimax(move, ghost_pos, maze, self.depth - 1, -float('inf'), float('inf'), False)
+            if score > best_score:
+                best_score = score
                 best_move = move
         
         self.prevPos = pacman_pos
@@ -246,7 +215,7 @@ class MinimaxAgent:
         if depth == 0 or maze.all_dots_eaten():
             return self.evaluate_state(pacman_pos, ghost_pos, maze)
             
-        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
+        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze, ghost_pos)
         if ghost_dist <= 1:
             return -float('inf') if maximizing_player else float('inf')
             
@@ -273,7 +242,7 @@ class MinimaxAgent:
                         break
             return min_eval
 
-    def bfs_shortest_path(self, start, target, maze):
+    def bfs_shortest_path(self, start, target, maze, avoid_pos=None):
         if start == target:
             return 0, [start]
             
@@ -290,6 +259,8 @@ class MinimaxAgent:
             for dx, dy in self.moves:
                 new_pos = (pos[0] + dx, pos[1] + dy)
                 if not maze.can_move(*new_pos):
+                    continue
+                if avoid_pos and new_pos == avoid_pos:
                     continue
                 if new_pos == target:
                     result = (len(path), path + [new_pos])
@@ -319,9 +290,8 @@ class Ghost:
         self.game = game
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.path = []
-        self.speed = .5  # Increased ghost speed (originally 0.3)
+        self.speed = 1  # Constant speed
         self.move_counter = 0
-
 
     def find_path_to_pacman(self, pacman_pos):
         queue = deque([(self.pos, [])])
@@ -377,7 +347,7 @@ class Pacman:
         self.alive = True
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.next_move = None
-        self.speed = 2  # Constant Pacman speed (faster than before)
+        self.speed = 1  # Constant speed
         self.move_counter = 0
         self.agent = MinimaxAgent(depth=2)
 
@@ -385,24 +355,20 @@ class Pacman:
             self.maze.eat_dot(x, y)
             self.score += 10
 
-
-    def update_speed(self):
-        current_speed = 3
-        if time.time() < self.speed_boost_time:
-            current_speed = 5
-        self.speed = current_speed
-
-
     def update(self, ghost_pos):
         self.next_move = self.agent.getAction(self.pos, ghost_pos, self.maze)
 
-    def move(self):
+    def move(self, ghost_pos):
         self.move_counter += 1
-        if self.move_counter < 1/self.speed:  # Constant speed calculation
+        if self.move_counter < 1/self.speed:
             return False
             
         self.move_counter = 0
         if self.next_move and self.alive:
+            # Don't move to ghost's position
+            if self.next_move == ghost_pos:
+                return False
+                
             self.prevPos = self.pos
             self.pos = self.next_move
             
@@ -425,9 +391,8 @@ class Pacman:
             self.get_direction()
             x = self.pos[0] * TILE_SIZE
             y = self.pos[1] * TILE_SIZE
-            color = YELLOW if self.speed > 3 else WHITE
             pacman_rect = pygame.Rect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
-            pygame.draw.circle(screen, color, pacman_rect.center, TILE_SIZE // 2 - 2)
+            pygame.draw.circle(screen, YELLOW, pacman_rect.center, TILE_SIZE // 2 - 2)
         else:
             x, y = self.pos
             center_x = x * TILE_SIZE + TILE_SIZE // 2
@@ -448,7 +413,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Arial', 20, bold=True)
         self.maze = Maze()
-        self.pacman_start_pos = (10, 1)
+        self.pacman_start_pos = (1, 3)
         self.ghost_start_pos = (GRID_WIDTH - 2, GRID_HEIGHT - 2)
         self.running = True
         self.game_over = False
@@ -512,7 +477,7 @@ class Game:
 
         self.pacman.update(self.ghost.pos)
         self.ghost.move(self.pacman.pos)
-        self.pacman.move()
+        self.pacman.move(self.ghost.pos)
 
         if self.check_collision() or self.pacman.all_goals_reached:
             self.game_over = True

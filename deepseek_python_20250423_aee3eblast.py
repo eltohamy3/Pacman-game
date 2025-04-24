@@ -49,7 +49,9 @@ class Maze:
             for x in range(GRID_WIDTH):
                 if self.layout[y][x] in [0, 2]:
                     self.goals.append((x, y))
+        self.reset()
 
+    def reset(self):
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         for x, y in self.goals:
             self.uneaten[y][x] = True
@@ -62,33 +64,28 @@ class Maze:
             self.uneaten[y][x] = False
 
     def is_dot_uneaten(self, x, y):
-        if 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT:
-            return self.uneaten[y][x]
-        return False
+        return 0 <= x < GRID_WIDTH and 0 <= y < GRID_HEIGHT and self.uneaten[y][x]
 
     def get_uneaten_dots(self):
-        uneaten_dots = set()
-        for y in range(GRID_HEIGHT):
-            for x in range(GRID_WIDTH):
-                if self.is_dot_uneaten(x, y):
-                    uneaten_dots.add((x, y))
-        return uneaten_dots
+        return {(x, y) for y in range(GRID_HEIGHT) for x in range(GRID_WIDTH) if self.is_dot_uneaten(x, y)}
 
     def all_dots_eaten(self):
         return len(self.get_uneaten_dots()) == 0
 
     def draw(self, screen):
+        # Draw walls and background
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
+                rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                 if self.layout[y][x] == 1:
-                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
                     pygame.draw.rect(screen, DARK_BLUE, rect)
-                elif self.layout[y][x] in [0, 2]:
-                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE * 1.6, TILE_SIZE * 1.6)
+                else:
                     pygame.draw.rect(screen, BLACK, rect)
-
+        
+        # Draw dots
         for x, y in self.get_uneaten_dots():
-            pygame.draw.circle(screen, YELLOW, (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2), 4)
+            center = (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2)
+            pygame.draw.circle(screen, YELLOW, center, 4)
 
 class MinimaxAgent:
     def __init__(self, depth=5):
@@ -119,24 +116,39 @@ class MinimaxAgent:
         uneaten_dots = maze.get_uneaten_dots()
         num_dots = len(uneaten_dots)
         
+        # Immediate loss if on ghost
+        if pacman_pos == ghost_pos:
+            return -float('inf')
+        
+        # Strong penalty for being adjacent to ghost
+        is_adjacent_to_ghost = False
+        for dx, dy in self.moves:
+            neighbor_pos = (pacman_pos[0] + dx, pacman_pos[1] + dy)
+            if neighbor_pos == ghost_pos:
+                is_adjacent_to_ghost = True
+                break
+        
+        if is_adjacent_to_ghost:
+            score -= 100000  # Massive penalty for adjacent positions
+        
         # Pellet collection with hash-based variations
         if maze.is_dot_uneaten(*pacman_pos):
             base = self.dot_value + (state_hash % 100)
             walls = sum(1 for dx, dy in self.moves 
-                       if not maze.can_move(pacman_pos[0]+dx, pacman_pos[1]+dy))
+                    if not maze.can_move(pacman_pos[0]+dx, pacman_pos[1]+dy))
             score += base * (1 + walls/2)
             if num_dots <= 5:  # Increased end-game bonus
                 score += (self.dot_value//2 + (state_hash % 50)) * (6 - num_dots)
         
-        # Ghost avoidance with hash-based danger scaling
+        # Ghost danger evaluation
         ghost_dist, ghost_path = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
         if ghost_dist <= 2:
             return -float('inf') * (1 + (state_hash % 10) * 0.01)
         elif ghost_dist <= self.ghost_danger_zone:
             danger = (self.ghost_danger_zone - ghost_dist) ** 3 * (1 + (state_hash % 20) * 0.005)
-            score -= danger * 10000  # Strong penalty but less than pellet value
+            score -= danger * 10000
         
-        # Strategic pellet pathing with hash-based variations
+        # Strategic pellet pathing
         if ghost_dist > 3 and uneaten_dots:
             dot_scores = []
             for dot in uneaten_dots:
@@ -146,12 +158,15 @@ class MinimaxAgent:
                     dot_hash = dot[0] * 123 + dot[1] * 321
                     path_safety = self.assess_path_safety(path, ghost_pos, maze)
                     
-                    # Cluster-aware scoring with hash-based variation
                     dot_score = (self.dot_value / (1 + dist)) * \
-                               (1 + density * 0.3) * \
-                               (1 + (dot_hash % 20) * 0.001 * \
-                               path_safety * \
-                               self.dot_cluster_bonus
+                            (1 + density * 0.3) * \
+                            (1 + (dot_hash % 20) * 0.001) * \
+                            path_safety * \
+                            self.dot_cluster_bonus
+                    
+                    # Penalize paths that go near ghosts
+                    if any(pos == ghost_pos for pos in path):
+                        dot_score *= 0.1  # Reduce score by 90% if path goes through ghost
                     
                     dot_scores.append((dot_score, path))
             
@@ -193,6 +208,20 @@ class MinimaxAgent:
         return min_safety
 
     def getAction(self, pacman_pos, ghost_pos, maze):
+        # First check for emergency ghost avoidance
+        for dx, dy in self.moves:
+            if (pacman_pos[0] + dx, pacman_pos[1] + dy) == ghost_pos:
+                # Find the safest escape move
+                escape_moves = []
+                for ex, ey in self.moves:
+                    new_pos = (pacman_pos[0] + ex, pacman_pos[1] + ey)
+                    if maze.can_move(*new_pos) and new_pos != ghost_pos:
+                        dist = abs(new_pos[0] - ghost_pos[0]) + abs(new_pos[1] - ghost_pos[1])
+                        escape_moves.append((dist, new_pos))
+                if escape_moves:
+                    return max(escape_moves, key=lambda x: x[0])[1]
+                return pacman_pos  # If no escape, stay put
+
         self.position_history.append(pacman_pos)
         self.visited_positions[pacman_pos] = self.visited_positions.get(pacman_pos, 0) + 1
         
@@ -242,36 +271,32 @@ class MinimaxAgent:
         self.prevPos = pacman_pos
         return best_move
 
-    def minimax(self, pacman_pos, ghost_pos, maze, depth, alpha, beta, maximizing_player):
+    def minimax(self, pacman_pos, ghost_pos, maze, depth, alpha, beta, is_pacman_turn):
         if depth == 0 or maze.all_dots_eaten():
             return self.evaluate_state(pacman_pos, ghost_pos, maze)
             
-        ghost_dist, _ = self.bfs_shortest_path(pacman_pos, ghost_pos, maze)
-        if ghost_dist <= 1:
-            return -float('inf') if maximizing_player else float('inf')
-            
-        if maximizing_player:
-            max_eval = -float('inf')
+        if is_pacman_turn:
+            max_score = -float('inf')
             for dx, dy in self.moves:
                 new_pos = (pacman_pos[0] + dx, pacman_pos[1] + dy)
                 if maze.can_move(*new_pos):
-                    eval = self.minimax(new_pos, ghost_pos, maze, depth - 1, alpha, beta, False)
-                    max_eval = max(max_eval, eval)
-                    alpha = max(alpha, eval)
+                    score = self.minimax(new_pos, ghost_pos, maze, depth-1, alpha, beta, False)
+                    max_score = max(max_score, score)
+                    alpha = max(alpha, score)
                     if beta <= alpha:
                         break
-            return max_eval
+            return max_score
         else:
-            min_eval = float('inf')
+            min_score = float('inf')
             for dx, dy in self.moves:
                 new_pos = (ghost_pos[0] + dx, ghost_pos[1] + dy)
                 if maze.can_move(*new_pos):
-                    eval = self.minimax(pacman_pos, new_pos, maze, depth - 1, alpha, beta, True)
-                    min_eval = min(min_eval, eval)
-                    beta = min(beta, eval)
+                    score = self.minimax(pacman_pos, new_pos, maze, depth-1, alpha, beta, True)
+                    min_score = min(min_score, score)
+                    beta = min(beta, score)
                     if beta <= alpha:
                         break
-            return min_eval
+            return min_score
 
     def bfs_shortest_path(self, start, target, maze):
         if start == target:
@@ -286,58 +311,64 @@ class MinimaxAgent:
         
         while queue:
             pos, path = queue.popleft()
-            
             for dx, dy in self.moves:
                 new_pos = (pos[0] + dx, pos[1] + dy)
-                if not maze.can_move(*new_pos):
-                    continue
-                if new_pos == target:
-                    result = (len(path), path + [new_pos])
-                    self.path_cache[cache_key] = result
-                    return result
-                if new_pos not in visited:
-                    visited.add(new_pos)
-                    queue.append((new_pos, path + [new_pos]))
+                if maze.can_move(*new_pos):
+                    if new_pos == target:
+                        result = (len(path), path + [new_pos])
+                        self.path_cache[cache_key] = result
+                        return result
+                    if new_pos not in visited:
+                        visited.add(new_pos)
+                        queue.append((new_pos, path + [new_pos]))
         
         return float('inf'), []
 
-    def calculate_dot_density(self, pos, maze, radius=2):
+    def calculate_dot_density(self, pos, maze, radius):
         x, y = pos
-        min_x = max(0, x - radius)
-        max_x = min(GRID_WIDTH - 1, x + radius)
-        min_y = max(0, y - radius)
-        max_y = min(GRID_HEIGHT - 1, y + radius)
-        
-        return sum(1 for dot_x, dot_y in maze.get_uneaten_dots()
-                 if min_x <= dot_x <= max_x and min_y <= dot_y <= max_y)
+        count = 0
+        for dy in range(-radius, radius+1):
+            for dx in range(-radius, radius+1):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < GRID_WIDTH and 0 <= ny < GRID_HEIGHT and maze.is_dot_uneaten(nx, ny):
+                    count += 1
+        return count
+
+    def assess_path_safety(self, path, ghost_pos, maze):
+        min_safety = 1.0
+        for pos in path:
+            dist, _ = self.bfs_shortest_path(pos, ghost_pos, maze)
+            if dist <= 3:
+                return 0.1  # Extremely dangerous
+            elif dist <= 5:
+                min_safety = min(min_safety, 0.5)  # Moderately dangerous
+        return min_safety
 
 class Ghost:
     def __init__(self, x, y, maze, game):
         self.pos = (x, y)
-        self.prevPos = (x, y)
         self.maze = maze
         self.game = game
         self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.path = []
-        self.speed = .5  # Increased ghost speed (originally 0.3)
+        self.speed = 1
         self.move_counter = 0
 
-
-    def find_path_to_pacman(self, pacman_pos):
+    def find_path_to_pacman(self, target_pos):
         queue = deque([(self.pos, [])])
         visited = set()
         
         while queue:
-            current, path = queue.popleft()
-            if current == pacman_pos:
+            pos, path = queue.popleft()
+            if pos == target_pos:
                 self.path = path
                 return
                 
             for dx, dy in self.moves:
-                nx, ny = current[0] + dx, current[1] + dy
-                if self.maze.can_move(nx, ny) and (nx, ny) not in visited:
-                    visited.add((nx, ny))
-                    queue.append(((nx, ny), path + [(nx, ny)]))
+                new_pos = (pos[0] + dx, pos[1] + dy)
+                if self.maze.can_move(*new_pos) and new_pos not in visited:
+                    visited.add(new_pos)
+                    queue.append((new_pos, path + [new_pos]))
         self.path = []
 
     def move(self, pacman_pos):
@@ -346,7 +377,6 @@ class Ghost:
             return False
             
         self.move_counter = 0
-        self.prevPos = self.pos
         self.find_path_to_pacman(pacman_pos)
         if self.path:
             self.pos = self.path[0]
@@ -357,11 +387,8 @@ class Ghost:
         x, y = self.pos
         ghost_rect = pygame.Rect(x * TILE_SIZE + 2, y * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4)
         pygame.draw.rect(screen, RED, ghost_rect)
-        eye_radius = 3
-        left_eye_pos = (x * TILE_SIZE + 7, y * TILE_SIZE + 7)
-        right_eye_pos = (x * TILE_SIZE + TILE_SIZE - 7, y * TILE_SIZE + 7)
-        pygame.draw.circle(screen, WHITE, left_eye_pos, eye_radius)
-        pygame.draw.circle(screen, WHITE, right_eye_pos, eye_radius)
+        pygame.draw.circle(screen, WHITE, (x * TILE_SIZE + 7, y * TILE_SIZE + 7), 3)
+        pygame.draw.circle(screen, WHITE, (x * TILE_SIZE + TILE_SIZE - 7, y * TILE_SIZE + 7), 3)
 
     def get_rect(self):
         return pygame.Rect(self.pos[0] * TILE_SIZE, self.pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -369,74 +396,60 @@ class Ghost:
 class Pacman:
     def __init__(self, x, y, maze):
         self.pos = (x, y)
-        self.prevPos = (x, y)
         self.maze = maze
-        self.all_goals_reached = False
-        self.dir = "r"
         self.score = 0
         self.alive = True
-        self.moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         self.next_move = None
-        self.speed = 2  # Constant Pacman speed (faster than before)
+        self.speed = 1
         self.move_counter = 0
-        self.agent = MinimaxAgent(depth=2)
-
+        self.agent = MinimaxAgent(depth=4)
+        
         if self.maze.is_dot_uneaten(x, y):
             self.maze.eat_dot(x, y)
             self.score += 10
 
-
-    def update_speed(self):
-        current_speed = 3
-        if time.time() < self.speed_boost_time:
-            current_speed = 5
-        self.speed = current_speed
-
-
     def update(self, ghost_pos):
         self.next_move = self.agent.getAction(self.pos, ghost_pos, self.maze)
+        # Emergency collision prevention
+        if self.next_move == ghost_pos:
+            for dx, dy in self.agent.moves:
+                new_pos = (self.pos[0] + dx, self.pos[1] + dy)
+                if self.maze.can_move(*new_pos) and new_pos != ghost_pos:
+                    self.next_move = new_pos
+                    break
 
-    def move(self):
+    def move(self, ghost_pos):
         self.move_counter += 1
-        if self.move_counter < 1/self.speed:  # Constant speed calculation
+        if self.move_counter < 1/self.speed:
             return False
             
         self.move_counter = 0
         if self.next_move and self.alive:
-            self.prevPos = self.pos
+            # Final safety check
+            if self.next_move == ghost_pos:
+                return False
+                
             self.pos = self.next_move
             
-            if self.maze.is_dot_uneaten(self.pos[0], self.pos[1]):
-                self.maze.eat_dot(self.pos[0], self.pos[1])
+            if self.maze.is_dot_uneaten(*self.pos):
+                self.maze.eat_dot(*self.pos)
                 self.score += 10
                 
             if self.maze.all_dots_eaten():
-                self.all_goals_reached = True
-                
-            return True
+                return True
         return False
 
-    def get_direction(self):
-        (pos_x, pos_y) = (self.prevPos[0] - self.pos[0], self.prevPos[1] - self.pos[1])
-        self.dir = {(-1, 0): 'r', (1, 0): 'l', (0, -1): 'd', (0, 1): 'u'}.get((pos_x, pos_y), self.dir)
-
     def draw(self, screen):
+        x, y = self.pos
+        center = (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2)
         if self.alive:
-            self.get_direction()
-            x = self.pos[0] * TILE_SIZE
-            y = self.pos[1] * TILE_SIZE
-            color = YELLOW if self.speed > 3 else WHITE
-            pacman_rect = pygame.Rect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4)
-            pygame.draw.circle(screen, color, pacman_rect.center, TILE_SIZE // 2 - 2)
+            pygame.draw.circle(screen, YELLOW, center, TILE_SIZE // 2 - 2)
         else:
-            x, y = self.pos
-            center_x = x * TILE_SIZE + TILE_SIZE // 2
-            center_y = y * TILE_SIZE + TILE_SIZE // 2
             size = TILE_SIZE // 2 - 2
-            pygame.draw.line(screen, RED, (center_x - size, center_y - size),
-                           (center_x + size, center_y + size), 2)
-            pygame.draw.line(screen, RED, (center_x - size, center_y + size),
-                           (center_x + size, center_y - size), 2)
+            pygame.draw.line(screen, RED, (center[0] - size, center[1] - size),
+                           (center[0] + size, center[1] + size), 2)
+            pygame.draw.line(screen, RED, (center[0] - size, center[1] + size),
+                           (center[0] + size, center[1] - size), 2)
 
     def get_rect(self):
         return pygame.Rect(self.pos[0] * TILE_SIZE, self.pos[1] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
@@ -444,97 +457,79 @@ class Pacman:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
-        pygame.display.set_caption("Advanced Pacman with AI")
+        pygame.display.set_caption("Advanced Pacman AI")
         self.clock = pygame.time.Clock()
         self.font = pygame.font.SysFont('Arial', 20, bold=True)
-        self.maze = Maze()
-        self.pacman_start_pos = (10, 1)
-        self.ghost_start_pos = (GRID_WIDTH - 2, GRID_HEIGHT - 2)
-        self.running = True
-        self.game_over = False
-        self.ghost = None
-        self.start_game()
+        self.reset_game()
 
-    def start_game(self):
+    def reset_game(self):
         self.maze = Maze()
-        self.pacman = Pacman(*self.pacman_start_pos, self.maze)
-        self.ghost = Ghost(*self.ghost_start_pos, self.maze, self)
+        self.pacman = Pacman(15, 7, self.maze)
+        self.ghost = Ghost(15, 10, self.maze, self)
         self.start_time = time.time()
-        self.end_time = None
         self.game_over = False
+        self.win = False
 
     def draw(self):
         self.screen.fill(BLUE)
         self.maze.draw(self.screen)
         self.ghost.draw(self.screen)
         self.pacman.draw(self.screen)
-
+        
+        # Score display
         score_text = f"Score: {self.pacman.score}"
-        txt = self.font.render(score_text, True, WHITE)
-        self.screen.blit(txt, (10, 10))
-
+        self.screen.blit(self.font.render(score_text, True, WHITE), (10, 10))
+        
+        # Game over display
         if self.game_over:
-            self.end_time = self.end_time or time.time()
-            elapsed = round(self.end_time - self.start_time, 2)
-
-            if self.pacman.all_goals_reached:
-                result_text = "YOU WIN!"
-                result_color = GREEN
-            else:
-                result_text = "GAME OVER"
-                result_color = RED
-
-            stats = [
-                result_text,
-                f"Time: {elapsed}s",
+            result = "YOU WIN!" if self.win else "GAME OVER"
+            color = GREEN if self.win else RED
+            texts = [
+                result,
                 f"Score: {self.pacman.score}",
-                f"Dots: {len(self.maze.goals) - len(self.maze.get_uneaten_dots())}/{len(self.maze.goals)}",
-                "Press R to Restart or Q to Quit"
+                "Press R to restart",
+                "Press Q to quit"
             ]
-
-            for i, line in enumerate(stats):
-                txt = self.font.render(line, True, result_color if i == 0 else WHITE)
-                self.screen.blit(txt, (WIDTH // 2 - txt.get_width() // 2, HEIGHT // 2 - 60 + i * 30))
-
+            for i, text in enumerate(texts):
+                y_pos = HEIGHT//2 - 30 + i*30
+                self.screen.blit(self.font.render(text, True, color if i==0 else WHITE), 
+                                (WIDTH//2 - 50, y_pos))
+        
         pygame.display.flip()
-
-    def check_collision(self):
-        pacman_rect = self.pacman.get_rect()
-        ghost_rect = self.ghost.get_rect()
-        if pacman_rect.colliderect(ghost_rect):
-            self.pacman.alive = False
-            return True
-        return False
 
     def update(self):
         if self.game_over:
             return
-
+            
         self.pacman.update(self.ghost.pos)
         self.ghost.move(self.pacman.pos)
-        self.pacman.move()
-
-        if self.check_collision() or self.pacman.all_goals_reached:
+        
+        if self.pacman.move(self.ghost.pos):
             self.game_over = True
-            self.end_time = time.time()
+            self.win = True
+            
+        if self.pacman.get_rect().colliderect(self.ghost.get_rect()):
+            self.pacman.alive = False
+            self.game_over = True
 
     def run(self):
-        while self.running:
+        running = True
+        while running:
             self.clock.tick(10)
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
+                    running = False
                 elif event.type == pygame.KEYDOWN:
                     if self.game_over:
                         if event.key == pygame.K_r:
-                            self.start_game()
+                            self.reset_game()
                         elif event.key == pygame.K_q:
-                            self.running = False
-
+                            running = False
+            
             if not self.game_over:
                 self.update()
-
             self.draw()
+        
         pygame.quit()
 
 if __name__ == "__main__":

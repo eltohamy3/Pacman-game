@@ -2,12 +2,12 @@ import heapq  # class search
 from collections import deque
 from configuration import GRID_WIDTH
 
-direction_array = [ (-1 , 0), (1 , 0), (0 , -1), (0 , 1)]
+direction_array = [ (0 , 1), (0 , -1), (1 , 0), (-1 , 0)]
 
 def euclideanHeuristic ( a , b ) :
     return ((a [0] - b [0]) ** 2 + (a [1] - b [1]) ** 2 ) ** 0.5
 
-def dfs ( maze , start , goal ) :
+def dfs ( maze , start) :
         stack = [start]
         visited = set()
         parent = { }
@@ -15,7 +15,7 @@ def dfs ( maze , start , goal ) :
         while stack :
             current = stack.pop ( )
 
-            if current == goal :
+            if current in maze.goals :
                 return reconstruct_path ( start , current , parent ) , visited
 
             x , y = current
@@ -32,7 +32,7 @@ def dfs ( maze , start , goal ) :
 
         return [], visited
 
-def bfs ( maze , start , goal ) :
+def bfs ( maze , start) :
     queue = deque ( [start] )
     visited = set (  )
     parent = { }
@@ -41,7 +41,7 @@ def bfs ( maze , start , goal ) :
     while queue :
         current = queue.popleft ( )
 
-        if current == goal :
+        if current in maze.get_uneaten_dots() :
             return reconstruct_path ( start , current , parent ) , visited
 
         x , y = current
@@ -58,7 +58,7 @@ def bfs ( maze , start , goal ) :
                 parent [(nx , ny)] = current
     return [], visited
 
-def ucs ( maze , start , goal ) :
+def ucs ( maze , start) :
     heap = [(0 , start)]
     visited = set ( )
     parent = { }
@@ -71,7 +71,7 @@ def ucs ( maze , start , goal ) :
 
         visited.add ( current )
 
-        if current == goal :
+        if current in maze.goals :
             return reconstruct_path ( start , current , parent ) , visited
 
         x , y = current
@@ -89,7 +89,8 @@ def ucs ( maze , start , goal ) :
                 parent [(nx , ny)] = current
     return [], visited
 
-def a_star ( maze , start , goal ) :
+def a_star ( maze , start) :
+    goal = maze.goals.pop()
     heap = [(0 , start)]
     parent = { }
     cost_to_node = { start : 0 }
@@ -116,7 +117,8 @@ def a_star ( maze , start , goal ) :
                 parent [(nx , ny)] = current
     return [], visited
 
-def greedy ( maze , start , goal ) :
+def greedy ( maze , start) :
+    goal = maze.goals.pop()
     heap = [(euclideanHeuristic(start, goal), start)]
     parent = { }
     visited = set ( )

@@ -6,7 +6,7 @@ pygame.font.init ( )
 
 class Maze :
     def __init__ ( self  , type) :
-        self.layout = BIGMAZE
+        self.layout = BIGSEARCH
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
         self.type = type  # 0 single gole  , 1 multi gole, 2 multi agent
@@ -88,15 +88,16 @@ class Game :
         pygame.display.set_caption ( "Pacman Game" )
         self.clock = pygame.time.Clock ( )
         self.font = pygame.font.SysFont ( 'arial' , 20 , bold = True )
-        self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
-        # self.start_pos = (24 , 7)
+        # self.start_pos = (GRID_WIDTH - 2 , GRID_HEIGHT - 2)
+        self.start_pos = (15 , GRID_HEIGHT - 2)
         self.running = True
         self.start_menu ( )
+        # self.pacman = Pacman(*self.start_pos, self.maze)
         self.path_history = []
 
     def set_algorithm ( self , name ) :
         self.algorithm = name
-        self.pacman = Pacman ( *self.start_pos, self.maze )
+        self.pacman = Pacman(*self.start_pos, self.maze)
         self.start_time = time.time ( )
         self.end_time = None
 

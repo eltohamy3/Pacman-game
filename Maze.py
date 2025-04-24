@@ -4,7 +4,7 @@ from configuration import *
 
 class Maze:
     def __init__(self):
-        self.layout = BIGMAZE
+        self.layout = BIGSEARCH
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
         # 2D array to track uneaten dots (True = uneaten, False = eaten)

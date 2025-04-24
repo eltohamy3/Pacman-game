@@ -5,7 +5,7 @@ from configuration import GRID_WIDTH
 direction_array = [ (0 , 1), (0 , -1), (1 , 0), (-1 , 0)]
 
 def euclidean_heuristic ( a , b ) :
-    return ((a  - b ) ** 2 + (a [1] - b [1]) ** 2 ) ** 0.5
+    return ((a[0]  - b[0]) ** 2 + (a[1] - b[1]) ** 2 ) ** 0.5
 
 def manhattan_heuristic (self, a , b ) :
     return abs(a  - b ) + abs(a [1] - b [1])
@@ -93,7 +93,7 @@ def ucs ( maze , start) :
     return [], visited
 
 def a_star ( maze , start) :
-    goal = maze.goals.pop()
+    goal = next(iter(maze.goals))
     heap = [(0 , start)]
     parent = { }
     cost_to_node = { start : 0 }
@@ -121,7 +121,7 @@ def a_star ( maze , start) :
     return [], visited
 
 def greedy ( maze , start) :
-    goal = maze.goals.pop()
+    goal = next(iter(maze.goals))
     heap = [(euclidean_heuristic(start, goal), start)]
     parent = { }
     visited = set ( )

@@ -35,31 +35,44 @@ pacman_down_path = [
     "assets/pacman-down/3.png"
 ]
 
-keys = {
+start_menu_keys = {
+    pygame.K_a : 'single_goal_menu' ,
+    pygame.K_b : 'multigoal_menu' ,
+}
+
+single_goal_menu_keys = {
     pygame.K_a : 'dfs' ,
     pygame.K_b : 'bfs' ,
     pygame.K_c : 'ucs' ,
     pygame.K_d : 'a_star' ,
     pygame.K_e : 'greedy' ,
-    pygame.K_f: 'dfs',
-    pygame.K_g: 'bfs',
-    pygame.K_h: 'ucs',
-    pygame.K_i: 'a_star',
-    pygame.K_j: 'greedy',
 }
 
-options = [
-    ("a- DFS (single goal)" , pygame.K_a) ,
-    ("b- BFS (single goal)" , pygame.K_b) ,
-    ("c- UCS (single goal)" , pygame.K_c) ,
-    ("d- A* Search (single goal)" , pygame.K_d) ,
-    ("e- Greedy Search (single goal)" , pygame.K_e) ,
-    ("f- DFS (Multiple goals)", pygame.K_f),
-    ("g- BFS (Multiple goals)", pygame.K_g),
-    ("h- UCS (Multiple goals)", pygame.K_h),
-    ("i- A* Search (Multiple goals)", pygame.K_i),
-    ("j- Greedy Search (Multiple goals)", pygame.K_j),
+
+multigoal_menu_keys = {
+    pygame.K_a : 'dfs' ,
+    pygame.K_b : 'bfs' ,
+}
+
+
+
+game_mode = [
+    ("a- Single Goal" , pygame.K_a) ,
+    ("b- Multiple Goal" , pygame.K_b)
 ]
+
+single_goal_options = [
+    ("a- DFS " , pygame.K_a) ,
+    ("b- BFS " , pygame.K_b) ,
+    ("c- UCS " , pygame.K_c) ,
+    ("d- A* Search" , pygame.K_d) ,
+    ("e- Greedy Search" , pygame.K_e)
+]
+multigoal_options = [
+    ("a- DFS ", pygame.K_a),
+    ("b- BFS ", pygame.K_b),
+]
+
 
 pacman_directions = {
     'r' : pacman_right_path ,
@@ -94,4 +107,4 @@ GOAL_COLOR = (255 , 0 , 0)
 GREEN = (0 , 255 , 0)
 PATH_COLOR = (168 , 92 , 83)
 VISITED_COLOR = (82 , 80 , 80)
-DOT_COLOR = (255, 255, 0)
+DOT_COLOR = (255, 255, 255)

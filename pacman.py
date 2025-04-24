@@ -1,3 +1,6 @@
+import inspect
+
+from Maze import *
 from configuration import *
 
 class Pacman :
@@ -14,21 +17,8 @@ class Pacman :
 
         # Eat the starting position dot
         self.maze.eat_dot(x, y)
-    def manhattanHeuristic (self, a , b ) :
+    def manhattan_Heuristic (self, a , b ) :
         return abs(a [0] - b [0]) + abs(a [1] - b [1])
-
-    def get_nearest_goal(self):
-        self.path, visited = bfs(self.maze, self.pos)
-
-        # closest_goal = None
-        # min_distance = float('inf')
-        #
-        # for goal in goals:
-        #     distance = self.manhattanHeuristic(start, goal)
-        #     if distance < min_distance:
-        #         closest_goal = goal
-        #         min_distance = distance
-        # return closest_goal
 
     def find_next_path(self, algorithm):
         self.path = []
@@ -40,15 +30,12 @@ class Pacman :
             
         # nearest_goal = self.get_nearest_goal(self.pos, uneaten_dots)
         # Find the next goal based on the algorithm
-        if self.maze.type == 1:
-            self.get_nearest_goal()
-        else:
-            search_fn = search_algorithms.get(algorithm)
-            if search_fn :
-                self.path, visited = search_fn(self.maze, self.pos)
-                self.original_path = list (self.path)
-                # Update visited nodes
-                self.visited_nodes.update(visited)
+        search_fn = search_algorithms.get ( algorithm )
+        if search_fn :
+            self.path, visited = search_fn(self.maze, self.pos)
+            self.original_path = list (self.path)
+            # Update visited nodes
+            self.visited_nodes.update(visited)
 
 
 

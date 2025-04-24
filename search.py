@@ -15,7 +15,7 @@ def dfs ( maze , start) :
         while stack :
             current = stack.pop ( )
 
-            if current in maze.goals :
+            if current in maze.get_uneaten_dots():
                 return reconstruct_path ( start , current , parent ) , visited
 
             x , y = current

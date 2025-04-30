@@ -11,8 +11,7 @@ MultiAgentMazeLayout = MazeLayouts.MultiAgentLayout
 SingleAgentMazeBigLayout = MazeLayouts.SingleAgentMazeBigLayout
 
 TILE_SIZE = 21
-GRID_WIDTH,GRID_HEIGHT = len(SingleAgentMazeLayout[0]),len(SingleAgentMazeLayout)
-
+GRID_WIDTH,GRID_HEIGHT = len(MultiAgentMazeLayout[0]),len(MultiAgentMazeLayout)
 WIDTH,HEIGHT = TILE_SIZE * GRID_WIDTH + 10,TILE_SIZE * GRID_HEIGHT + 10
 
 pacman_right_path = [
@@ -105,6 +104,7 @@ movement_direction = {
 	(1,0): 'l',
 	(0,-1): 'd',
 	(0,1): 'u',
+	(0,0) : 'r',
 	(-GRID_WIDTH + 1,0): 'r',
 	(GRID_WIDTH - 1,0): 'l',
 }

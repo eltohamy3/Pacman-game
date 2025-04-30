@@ -1,4 +1,8 @@
+import heapq
+from collections import deque
+
 from Configuration import *
+from Configuration import GRID_WIDTH
 
 direction_array = [(0,1),(0,-1),(1,0),(-1,0)]
 

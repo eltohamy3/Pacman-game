@@ -1,3 +1,4 @@
+import inspect
 import time
 from abc import abstractmethod
 
@@ -193,7 +194,7 @@ class MultiAgentGame(Game):
 		self.font = pygame.font.SysFont('arial',20,bold = True)
 		self.maze = MultiGoalMaze()
 		self.pacman_start_pos = (10,1)
-		self.ghost_start_pos = (GRID_WIDTH - 2,GRID_HEIGHT - 2)
+		self.ghost_start_pos = (GRID_WIDTH // 2,GRID_HEIGHT // 2)
 		self.start_game()
 		self.running = True
 		self.game_over = False

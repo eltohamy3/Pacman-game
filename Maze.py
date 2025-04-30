@@ -34,8 +34,8 @@ class Maze:
         return False
 
     def is_valid(self,x,y):
-        if 0<=x<GRID_WIDTH and 0<=y<GRID_HEIGHT:
-            return self.layout[y][x] == 0
+        if 0 <=x <GRID_WIDTH and 0 <=y < GRID_HEIGHT:
+            return self.layout[y][x] == 0 or self.layout[y][x] == 2
         return False
 
     @abstractmethod
@@ -69,6 +69,7 @@ class MultiGoalMaze(Maze):
 
 class SingleGoalMaze(Maze):
     def __init__(self):
+        global GRID_HEIGHT,GRID_WIDTH
         self.layout = SingleAgentMazeLayout
         super().__init__()
         self.goals.add((1,GRID_HEIGHT - 2))

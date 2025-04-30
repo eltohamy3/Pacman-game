@@ -73,7 +73,7 @@ class Pacman:
 class MultiAgentPacman(Pacman):
 	def __init__(self,x,y,maze):
 		self.pos = (x,y)
-		self.prevPos = (x,y)
+		self.prevPos = (0,0)
 		self.maze = maze
 		self.original_path = []
 		self.all_goals_reached = False
@@ -153,6 +153,9 @@ class MultiAgentPacman(Pacman):
 
 			for dx,dy in self.moves:
 				nx,ny = pacman_pos[0] + dx,pacman_pos[1] + dy
+				isGate = self.maze.is_gate(*pacman_pos)
+				if not self.maze.is_valid(nx,ny) and isGate:
+					nx = 0 if pacman_pos[0] != 0 else GRID_WIDTH - 1
 				if self.maze.is_valid(nx,ny) and (nx,ny) != ghost_pos:
 					eval,_ = self.minimax((nx,ny),ghost_pos,depth - 1,False,alpha,beta)
 
@@ -171,6 +174,9 @@ class MultiAgentPacman(Pacman):
 
 			for dx,dy in self.moves:
 				nx,ny = ghost_pos[0] + dx,ghost_pos[1] + dy
+				isGate = self.maze.is_gate(*ghost_pos)
+				if not self.maze.is_valid(nx,ny) and isGate:
+					nx = 0 if ghost_pos[0] != 0 else GRID_WIDTH - 1
 				if self.maze.is_valid(nx,ny):
 					eval,_ = self.minimax(pacman_pos,(nx,ny),depth - 1,True,alpha,beta)
 

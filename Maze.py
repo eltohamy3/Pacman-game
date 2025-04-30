@@ -1,13 +1,12 @@
 from abc import abstractmethod
 
-from configuration import *
+import Configuration
+from Configuration import *
 
 class Maze:
     def __init__(self):
-        self.layout = BIGSEARCH
         self.uneaten = [[False for _ in range(GRID_WIDTH)] for _ in range(GRID_HEIGHT)]
         self.goals = set()
-        # 2D array to track uneaten dots (True = uneaten, False = eaten)
 
     def eat_dot(self, x, y):
         if 0<=x<GRID_WIDTH and 0<=y<GRID_HEIGHT:
@@ -45,11 +44,13 @@ class Maze:
 
 class MultiGoalMaze(Maze):
     def __init__(self):
+        self.layout = SingleAgentMazeLayout
         super().__init__()
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 if self.layout[y][x] == 0:
                     self.goals.add((x,y))
+
 
         for x,y in self.goals:
             self.uneaten[y][x] = True
@@ -68,10 +69,12 @@ class MultiGoalMaze(Maze):
 
 class SingleGoalMaze(Maze):
     def __init__(self):
+        self.layout = SingleAgentMazeLayout
         super().__init__()
         self.goals.add((1,GRID_HEIGHT - 2))
         for x,y in self.goals:
             self.uneaten[y][x] = True
+
 
     def draw(self,screen,visited,path):
         for y in range(GRID_HEIGHT):
@@ -91,3 +94,23 @@ class SingleGoalMaze(Maze):
         # Draw dots for goals that haven't been eaten yet
         for x,y in self.get_uneaten_dots():
             pygame.draw.circle(screen,DOT_COLOR,(x * TILE_SIZE + TILE_SIZE // 2,y * TILE_SIZE + TILE_SIZE // 2),4)
+
+class MultiAgentMaze(Maze):
+    def __init__(self):
+        self.layout = MultiAgentMazeLayout
+        super().__init__()
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                if self.layout[y][x] == 0:
+                    self.goals.add((x, y))
+        for x, y in self.goals:
+            self.uneaten[y][x] = True
+    def draw(self,screen,visited,path):
+        for y in range(GRID_HEIGHT):
+            for x in range(GRID_WIDTH):
+                if self.layout[y][x] == 0 or self.layout[y][x] == 2:
+                    rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE * 1.6, TILE_SIZE * 1.6)
+                    pygame.draw.rect(screen, BLACK, rect)
+
+        for x, y in self.get_uneaten_dots():
+            pygame.draw.circle(screen, DOT_COLOR, (x * TILE_SIZE + TILE_SIZE // 2, y * TILE_SIZE + TILE_SIZE // 2), 4)

@@ -179,7 +179,7 @@ class SingleAgentGame(Game):
 				elif event.type == pygame.KEYDOWN:
 					if self.pacman.all_goals_reached:
 						if event.key == pygame.K_r:
-							self.reset()
+							reset()
 						elif event.key == pygame.K_q:
 							self.running = False
 			self.update()
@@ -205,6 +205,7 @@ class MultiAgentGame(Game):
 		self.ghost = Ghost(*self.ghost_start_pos,self.maze,self)
 		self.start_time = time.time()
 		self.end_time = None
+		self.running = True
 		self.game_over = False
 
 	def draw(self):
@@ -276,7 +277,7 @@ class MultiAgentGame(Game):
 				elif event.type == pygame.KEYDOWN:
 					if self.game_over:
 						if event.key == pygame.K_r:
-							self.start_game()
+							reset()
 						elif event.key == pygame.K_q:
 							self.running = False
 
@@ -298,14 +299,11 @@ def main_sreen():
 		option_text = font.render(text,True,WHITE)
 		screen.blit(option_text,(20,120 + i * 40))
 	pygame.display.flip()
-
-
-if __name__ == "__main__":
-	pygame.init()
-	pygame.font.init()
-	game = None
+def reset():
 	main_sreen()
-
+	game = start()
+	game.run()
+def start():
 	selecting = True
 	while selecting:
 		for event in pygame.event.get():
@@ -319,4 +317,12 @@ if __name__ == "__main__":
 				elif event.key == pygame.K_b:
 					game = MultiAgentGame()
 					selecting = False
+	return game
+
+
+if __name__ == "__main__":
+	pygame.init()
+	pygame.font.init()
+	main_sreen()
+	game = start()
 	game.run()

@@ -2,8 +2,9 @@ import math
 import time
 from collections import deque
 
-from Configuration import *
+from scipy.stats import power
 
+from Configuration import *
 
 class Pacman:
 	def __init__(self,x,y,maze):
@@ -55,10 +56,10 @@ class Pacman:
 		x = self.pos[0] * TILE_SIZE
 		y = self.pos[1] * TILE_SIZE
 
-		pacman_dir = pacman_directions.get(self.dir)
-		self.frame_idx = self.frame_idx % len(pacman_dir)
+		pacman_dir_img = pacman_directions.get(self.dir)
+		self.frame_idx = self.frame_idx % len(pacman_dir_img)
 
-		pacman_img = pygame.image.load(pacman_dir[self.frame_idx])
+		pacman_img = pygame.image.load(pacman_dir_img[self.frame_idx])
 		pacman_img = pygame.transform.scale(pacman_img,(TILE_SIZE,TILE_SIZE))
 		screen.blit(pacman_img,(x,y))
 
@@ -82,17 +83,11 @@ class MultiAgentPacman(Pacman):
 		self.alive = True
 		self.moves = [(-1,0),(1,0),(0,-1),(0,1)]
 		self.next_move = None
-		self.speed = 1.2  # Faster than ghost
-		self.move_counter = 0
 		self.visited_nodes = set()
 		self.last_dot_time = time.time()
 		self.dot_check_interval = 2  # Check for nearest dot every 2 seconds
 		self.frame_idx = 0
-
-		if self.maze.is_not_eaten(x,y):
-			self.maze.eat_dot(x,y)
-			self.score += 10
-
+		self.maze.eat_dot(x,y)
 	def find_nearest_dot(self):
 		uneaten_dots = self.maze.get_uneaten_dots()
 		if not uneaten_dots:
@@ -115,7 +110,6 @@ class MultiAgentPacman(Pacman):
 		return None
 
 	def evaluate_state(self,pacman_pos,ghost_pos):
-		"""Evaluation function for leaf nodes"""
 		score = 0
 
 		# Reward for eating dots
@@ -219,11 +213,6 @@ class MultiAgentPacman(Pacman):
 			self.next_move = self.minimax_decision(ghost_pos,depth = 2)
 
 	def move(self):
-		self.move_counter += 1
-		if self.move_counter<1 / self.speed:
-			return False
-
-		self.move_counter = 0
 		if self.next_move and self.alive:
 			self.prevPos = self.pos
 			self.pos = self.next_move

@@ -11,7 +11,7 @@ class Ghost:
 		self.game = game
 		self.moves = [(-1,0),(1,0),(0,-1),(0,1)]
 		self.path = []
-		self.speed = 0.9  # Slower than Pacman
+		self.speed = 0.99
 		self.move_counter = 0
 
 	def find_path_to_pacman(self,pacman_pos):

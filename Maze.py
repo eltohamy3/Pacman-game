@@ -98,8 +98,10 @@ class SingleGoalMaze(Maze):
 
 class MultiAgentMaze(Maze):
     def __init__(self):
+        self.is_power_pellet = False
         self.layout = MultiAgentMazeLayout
         super().__init__()
+        self.power_pellets = [(1,1),(1,GRID_HEIGHT - 2),(GRID_WIDTH - 2,1),(GRID_WIDTH - 2,GRID_HEIGHT - 2)]
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
                 if self.layout[y][x] == 0:

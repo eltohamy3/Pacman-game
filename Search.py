@@ -11,8 +11,8 @@ def euclidean_heuristic(a,b):
 	return ((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2) ** 0.5
 
 
-def manhattan_heuristic(self,a,b):
-	return abs(a - b) + abs(a[1] - b[1])
+def manhattan_heuristic(a,b):
+	return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
 def dfs(maze,start):

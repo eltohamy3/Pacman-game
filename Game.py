@@ -44,10 +44,6 @@ class Game:
 	def display_screen(self,text,mode):
 		pass
 
-	def reset(self):
-		self.start_game()
-		self.run()
-
 	@abstractmethod
 	def run(self):
 		pass
@@ -88,28 +84,14 @@ class SingleAgentGame(Game):
 			s = pygame.Surface((WIDTH,HEIGHT),pygame.SRCALPHA)
 			s.fill((0,0,0,180))  # Black with transparency
 			self.screen.blit(s,(0,0))
-
+			stats = [
+				f"{self.algorithm.upper()} - Goal Reached!",
+				f"Time: {elapsed}s",
+				f"Path Length: {len(self.path_history)}",
+				"Press R to Restart or Q to Quit"
+			]
 			if inspect.isabstract(SingleGoalMaze):
-				stats = [
-					f"{self.algorithm.upper()} - Goal Reached!",
-					f"Time: {elapsed}s",
-					f"Visited: {len(self.pacman.visited_nodes)}",
-					f"Path Length: {len(self.path_history)}",
-					"Press R to Restart or Q to Quit"
-				]
-			elif inspect.isabstract(MultiGoalMaze):
-				stats = [
-					f"{self.algorithm.upper()} - Goal Reached!",
-					f"Time: {elapsed}s",
-					f"Path Length: {len(self.path_history)}",
-					"Press R to Restart or Q to Quit"
-				]
-			else:
-				stats = [
-					f"{self.algorithm.upper()} - Goal Reached!",
-					f"Time: {elapsed}s",
-					"Press R to Restart or Q to Quit"
-				]
+				stats.append(f"Visited: {len(self.pacman.visited_nodes)}")
 			for i,line in enumerate(stats):
 				txt = self.font.render(line,True,GREEN)
 				self.screen.blit(txt,(WIDTH // 2 - txt.get_width() // 2,100 + i * 30))
